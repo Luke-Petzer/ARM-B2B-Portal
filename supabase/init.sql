@@ -403,6 +403,7 @@ CREATE TABLE public.orders (
   buyer_reference         TEXT,               -- buyer's own PO number
   delivery_instructions   TEXT,
   notes                   TEXT,
+  order_notes             TEXT,               -- buyer-supplied notes at checkout
   -- Status timestamps
   confirmed_at            TIMESTAMPTZ,
   fulfilled_at            TIMESTAMPTZ,
