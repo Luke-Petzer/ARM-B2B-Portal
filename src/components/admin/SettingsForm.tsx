@@ -2,13 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { updateTenantConfigAction } from "@/app/actions/admin";
 import type { Database } from "@/lib/supabase/types";
 
@@ -221,23 +214,12 @@ export default function SettingsForm({ config }: SettingsFormProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-5">
-          <div>
-            <FieldLabel>Account Type</FieldLabel>
-            <Select
-              name="bank_account_type"
-              defaultValue={config.bank_account_type ?? "Current"}
-            >
-              <SelectTrigger className="h-10 text-sm border-slate-200 focus:ring-slate-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Current">Current</SelectItem>
-                <SelectItem value="Savings">Savings</SelectItem>
-                <SelectItem value="Transmission">Transmission</SelectItem>
-                <SelectItem value="Credit">Credit</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <InputField
+            name="bank_account_type"
+            label="Account Type"
+            defaultValue={config.bank_account_type ?? ""}
+            placeholder="e.g. Current, Savings, Cheque"
+          />
           <InputField
             name="bank_reference_prefix"
             label="Reference Prefix"
