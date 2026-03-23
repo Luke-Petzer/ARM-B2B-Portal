@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // Phase 5: Full admin dashboard renders here.
 // Placeholder confirms admin auth + middleware are working correctly.
 import { getSession } from "@/lib/auth/session";

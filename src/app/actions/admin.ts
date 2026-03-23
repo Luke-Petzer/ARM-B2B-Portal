@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -389,6 +389,7 @@ export async function createProductAction(
   }
 
   revalidatePath("/admin/products");
+  revalidateTag("catalogue", {});
   return { id: data.id };
 }
 
@@ -527,6 +528,7 @@ export async function updateProductAction(
   }
 
   revalidatePath("/admin/products");
+  revalidateTag("catalogue", {});
 }
 
 // ---------------------------------------------------------------------------
@@ -551,6 +553,8 @@ export async function toggleProductActiveAction(
     console.error("[admin] toggleProduct:", error.message);
     return { error: "Failed to update product status." };
   }
+
+  revalidateTag("catalogue", {});
 }
 
 // ---------------------------------------------------------------------------

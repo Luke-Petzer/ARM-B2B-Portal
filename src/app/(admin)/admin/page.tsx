@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { adminClient } from "@/lib/supabase/admin";
 import { Clock, Loader, TrendingUp, Users } from "lucide-react";
 import OrderLedger from "@/components/admin/OrderLedger";

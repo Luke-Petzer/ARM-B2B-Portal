@@ -1,31 +1,50 @@
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 import NavBar from "@/components/portal/NavBar";
 import CatalogueShell from "./CatalogueShell";
+
+// ---------------------------------------------------------------------------
+// Cached catalogue fetcher — shared across all authenticated buyers.
+// Revalidates every 5 minutes (ISR) OR immediately when an admin mutates a
+// product (on-demand invalidation via revalidateTag("catalogue")).
+// ---------------------------------------------------------------------------
+const getCatalogueData = unstable_cache(
+  async () => {
+    const [productsResult, categoriesResult] = await Promise.all([
+      adminClient
+        .from("products")
+        .select(
+          `id, sku, name, description, details, price,
+           discount_type, discount_threshold, discount_value,
+           category_id,
+           categories ( id, name, slug, display_order ),
+           product_images ( url, is_primary, display_order )`
+        )
+        .eq("is_active", true)
+        .order("sku"),
+      adminClient
+        .from("categories")
+        .select("id, name, slug, display_order")
+        .eq("is_active", true)
+        .order("display_order"),
+    ]);
+    return {
+      products: productsResult.data,
+      categories: categoriesResult.data,
+      error: productsResult.error,
+    };
+  },
+  ["catalogue-data"],
+  { tags: ["catalogue"], revalidate: 300 }
+);
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [{ data: products, error }, { data: categoryList }] = await Promise.all([
-    adminClient
-      .from("products")
-      .select(
-        `id, sku, name, description, details, price,
-         discount_type, discount_threshold, discount_value,
-         category_id,
-         categories ( id, name, slug, display_order ),
-         product_images ( url, is_primary, display_order )`
-      )
-      .eq("is_active", true)
-      .order("sku"),
-    adminClient
-      .from("categories")
-      .select("id, name, slug, display_order")
-      .eq("is_active", true)
-      .order("display_order"),
-  ]);
+  const { products, categories: categoryList, error } = await getCatalogueData();
 
   if (error) {
     console.error("[dashboard] products fetch error:", error.message);

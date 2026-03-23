@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import NavBar from "@/components/portal/NavBar";
 import CartReviewShell from "./CartReviewShell";
 import { getSession } from "@/lib/auth/session";
