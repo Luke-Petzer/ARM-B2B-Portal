@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, MoreHorizontal, Package } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import ProductDrawer, {
   type ProductForDrawer,
   type CategoryOption,
@@ -32,8 +32,7 @@ export default function ProductsTable({
   const [products, setProducts] = useState<ProductRow[]>(initialProducts);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<ProductRow | null>(null);
-  const [togglingId, startToggle] = useTransition();
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [, startToggle] = useTransition();
 
   const handleSaved = () => {
     router.refresh();
@@ -47,11 +46,9 @@ export default function ProductsTable({
   const handleOpenEdit = (product: ProductRow) => {
     setEditProduct(product);
     setDrawerOpen(true);
-    setOpenMenuId(null);
   };
 
   const handleToggleActive = (product: ProductRow) => {
-    setOpenMenuId(null);
     startToggle(async () => {
       const fd = new FormData();
       fd.set("id", product.id);
@@ -64,8 +61,6 @@ export default function ProductsTable({
       );
     });
   };
-
-  const _ = togglingId; // suppress unused warning
 
   return (
     <>
@@ -180,37 +175,15 @@ export default function ProductsTable({
                     </label>
                   </td>
 
-                  {/* Actions menu */}
-                  <td className="px-6 py-4 text-right relative">
+                  {/* Actions */}
+                  <td className="px-6 py-4 text-right">
                     <button
                       type="button"
-                      onClick={() =>
-                        setOpenMenuId(
-                          openMenuId === product.id ? null : product.id
-                        )
-                      }
-                      className="text-slate-400 hover:text-slate-600 transition-colors"
+                      onClick={() => handleOpenEdit(product)}
+                      className="h-8 px-3 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                     >
-                      <MoreHorizontal className="w-5 h-5" />
+                      Edit
                     </button>
-                    {openMenuId === product.id && (
-                      <div className="absolute right-6 top-full mt-1 w-36 bg-white rounded-lg border border-slate-200 shadow-lg z-10 py-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(product)}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(product)}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          {product.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))
