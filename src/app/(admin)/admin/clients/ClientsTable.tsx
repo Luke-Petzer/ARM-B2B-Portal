@@ -199,6 +199,7 @@ export default function ClientsTable({
       </div>
 
       <ClientDrawer
+        key={editClient?.id ?? "new"}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onSaved={handleSaved}
