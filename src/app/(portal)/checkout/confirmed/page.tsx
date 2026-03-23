@@ -41,7 +41,7 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
   const { data: config } = await adminClient
     .from("tenant_config")
     .select(
-      "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_reference_prefix, email_from_address"
+      "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_swift_code, bank_reference_prefix, email_from_address"
     )
     .eq("id", 1)
     .single();
@@ -132,6 +132,16 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
                       {config?.bank_branch_code ?? "—"}
                     </p>
                   </div>
+                  {config?.bank_swift_code && (
+                    <div>
+                      <p className="text-[12px] text-gray-500 mb-0.5">
+                        SWIFT / BIC
+                      </p>
+                      <p className="text-[14px] font-medium text-slate-900">
+                        {config.bank_swift_code}
+                      </p>
+                    </div>
+                  )}
                   <div className="col-span-2">
                     <p className="text-[12px] text-gray-500 mb-0.5">
                       Payment Reference

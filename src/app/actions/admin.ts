@@ -735,6 +735,8 @@ export async function updateTenantConfigAction(
         (formData.get("bank_branch_code") as string | null)?.trim() || null,
       bank_account_type:
         (formData.get("bank_account_type") as string | null)?.trim() || null,
+      bank_swift_code:
+        (formData.get("bank_swift_code") as string | null)?.trim() || null,
       bank_reference_prefix: bankRefPrefix,
       updated_at: new Date().toISOString(),
     })

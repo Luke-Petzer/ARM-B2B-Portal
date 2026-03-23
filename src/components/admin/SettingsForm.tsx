@@ -221,6 +221,12 @@ export default function SettingsForm({ config }: SettingsFormProps) {
             placeholder="e.g. Current, Savings, Cheque"
           />
           <InputField
+            name="bank_swift_code"
+            label="SWIFT / BIC Code"
+            defaultValue={config.bank_swift_code ?? ""}
+            placeholder="e.g. CABLZAJJ"
+          />
+          <InputField
             name="bank_reference_prefix"
             label="Reference Prefix"
             defaultValue={config.bank_reference_prefix}

@@ -41,6 +41,7 @@ export interface Database {
           bank_account_number: string | null;
           bank_branch_code: string | null;
           bank_account_type: string | null;
+          bank_swift_code: string | null;
           bank_reference_prefix: string;
           email_from_name: string | null;
           email_from_address: string | null;
@@ -64,6 +65,7 @@ export interface Database {
           bank_account_number?: string | null;
           bank_branch_code?: string | null;
           bank_account_type?: string | null;
+          bank_swift_code?: string | null;
           bank_reference_prefix?: string;
           email_from_name?: string | null;
           email_from_address?: string | null;
@@ -86,6 +88,7 @@ export interface Database {
           bank_account_number?: string | null;
           bank_branch_code?: string | null;
           bank_account_type?: string | null;
+          bank_swift_code?: string | null;
           bank_reference_prefix?: string;
           email_from_name?: string | null;
           email_from_address?: string | null;

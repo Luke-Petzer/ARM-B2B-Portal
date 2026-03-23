@@ -559,6 +559,12 @@ function BankingDetails({
             {config.bank_branch_code ?? "—"}
           </Text>
         </View>
+        {config.bank_swift_code ? (
+          <View style={styles.bankCell}>
+            <Text style={styles.bankLabel}>SWIFT / BIC</Text>
+            <Text style={styles.bankValue}>{config.bank_swift_code}</Text>
+          </View>
+        ) : null}
 
         {/* Payment reference spans full width */}
         <View style={styles.bankRefCell}>
