@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
@@ -45,6 +46,13 @@ export default async function AdminLayout({
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-50">
           <div className="flex items-center gap-4">
             <AdminMobileNav isSuperAdmin={isSuperAdmin} />
+            <Image
+              src="/logo.png"
+              alt="AR Steel Manufacturing"
+              height={28}
+              width={110}
+              className="hidden md:block object-contain"
+            />
             <p className="text-sm font-medium text-slate-700">
               {adminName}
               <span className="ml-2 text-[11px] font-normal text-slate-400">Admin</span>

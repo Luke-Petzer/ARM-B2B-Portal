@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Layers, Menu, X, Loader2, ShoppingCart } from "lucide-react";
+import { Menu, X, Loader2, ShoppingCart } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useCartStore } from "@/lib/cart/store";
 import type { Route } from "next";
@@ -46,13 +47,15 @@ export default function NavBar() {
       <nav className="h-[64px] border-b border-gray-100 bg-white flex items-center justify-between px-8 flex-shrink-0 z-50 relative">
         {/* Left — brand + nav links */}
         <div className="flex items-center gap-8">
-          <Link href={"/dashboard" as Route} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-slate-900 rounded flex items-center justify-center">
-              <Layers className="text-white w-[18px] h-[18px]" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              SteelSource
-            </span>
+          <Link href={"/dashboard" as Route} className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="AR Steel Manufacturing"
+              height={36}
+              width={150}
+              priority
+              className="object-contain"
+            />
           </Link>
 
           {/* Desktop nav links — hidden on mobile */}
