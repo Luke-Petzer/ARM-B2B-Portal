@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import ClientDrawer, {
   type ClientForDrawer,
 } from "@/components/admin/ClientDrawer";
@@ -16,10 +16,6 @@ export interface UnpaidOrder {
 
 interface ClientsTableProps {
   clients: ClientForDrawer[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  search: string;
   unpaidOrdersByClientId: Record<string, UnpaidOrder[]>;
 }
 
@@ -55,17 +51,24 @@ function StatusBadge({ active }: { active: boolean }) {
 
 export default function ClientsTable({
   clients,
-  totalCount,
-  page,
-  pageSize,
-  search,
   unpaidOrdersByClientId,
 }: ClientsTableProps) {
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<ClientForDrawer | null>(null);
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const filteredClients = searchTerm.trim()
+    ? clients.filter((c) => {
+        const q = searchTerm.toLowerCase();
+        return (
+          c.business_name.toLowerCase().includes(q) ||
+          (c.account_number ?? "").toLowerCase().includes(q) ||
+          c.contact_name.toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q)
+        );
+      })
+    : clients;
 
   const handleSaved = () => {
     router.refresh();
@@ -81,49 +84,36 @@ export default function ClientsTable({
     setDrawerOpen(true);
   };
 
-  const buildPageUrl = (p: number) => {
-    const params = new URLSearchParams();
-    params.set("page", String(p));
-    if (search) params.set("search", search);
-    return `?${params.toString()}`;
-  };
-
   return (
     <>
       {/* Action bar */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-        <form method="GET" className="flex flex-wrap items-center gap-4">
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            name="search"
-            defaultValue={search}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by name, account no., contact…"
-            className="h-9 w-full md:w-72 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+            className="h-9 w-full pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
           />
-          <button
-            type="submit"
-            className="h-9 px-4 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
-          >
-            Search
-          </button>
-          {search && (
-            <a
-              href="/admin/clients"
-              className="h-9 px-4 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors flex items-center"
-            >
-              Clear
-            </a>
-          )}
-        </form>
+        </div>
 
-        <button
-          type="button"
-          onClick={handleOpenCreate}
-          className="h-10 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm w-full md:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add Client
-        </button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <p className="text-sm text-slate-400 hidden md:block">
+            {filteredClients.length}
+            {searchTerm.trim() ? ` of ${clients.length}` : ""} client
+            {filteredClients.length !== 1 ? "s" : ""}
+          </p>
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="h-10 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm w-full md:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            Add Client
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -150,19 +140,19 @@ export default function ClientsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {clients.length === 0 ? (
+            {filteredClients.length === 0 ? (
               <tr>
                 <td
                   colSpan={6}
                   className="px-6 py-16 text-center text-sm text-slate-400"
                 >
-                  {search
-                    ? "No clients match your search."
+                  {searchTerm.trim()
+                    ? `No clients found for "${searchTerm}".`
                     : "No clients yet. Click \"Add Client\" to get started."}
                 </td>
               </tr>
             ) : (
-              clients.map((client) => (
+              filteredClients.map((client) => (
                 <tr
                   key={client.id}
                   className="hover:bg-slate-50/50 transition-colors"
@@ -206,35 +196,6 @@ export default function ClientsTable({
             )}
           </tbody>
         </table>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-50 flex items-center justify-between bg-slate-50/30">
-            <p className="text-xs text-slate-400 font-medium">
-              Showing{" "}
-              {Math.min((page - 1) * pageSize + 1, totalCount)}–
-              {Math.min(page * pageSize, totalCount)} of {totalCount} clients
-            </p>
-            <div className="flex items-center gap-2">
-              {page > 1 && (
-                <a
-                  href={buildPageUrl(page - 1)}
-                  className="h-8 px-3 text-xs font-medium text-slate-600 hover:bg-white rounded-md border border-slate-200 transition-colors flex items-center"
-                >
-                  Previous
-                </a>
-              )}
-              {page < totalPages && (
-                <a
-                  href={buildPageUrl(page + 1)}
-                  className="h-8 px-3 text-xs font-medium text-slate-600 hover:bg-white rounded-md border border-slate-200 transition-colors flex items-center"
-                >
-                  Next
-                </a>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <ClientDrawer

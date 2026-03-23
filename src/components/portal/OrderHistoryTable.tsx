@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Search } from "lucide-react";
 import { reorderAction } from "@/app/actions/order";
 
 function StatusBadge({ status }: { status: string }) {
@@ -49,9 +49,25 @@ interface OrderHistoryTableProps {
 }
 
 export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
+  const [searchTerm, setSearchTerm] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const filteredOrders = searchTerm.trim()
+    ? orders.filter((o) => {
+        const q = searchTerm.toLowerCase();
+        return (
+          o.reference_number.toLowerCase().includes(q) ||
+          o.status.toLowerCase().includes(q) ||
+          o.items.some(
+            (i) =>
+              i.sku.toLowerCase().includes(q) ||
+              i.product_name.toLowerCase().includes(q)
+          )
+        );
+      })
+    : orders;
 
   const handleReorder = (orderId: string) => {
     setPendingId(orderId);
@@ -85,6 +101,19 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
   }
 
   return (
+    <div>
+      {/* Search */}
+      <div className="relative mb-4 w-full md:w-80">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by reference, SKU, or status…"
+          className="h-9 w-full pl-9 pr-3 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+        />
+      </div>
+
     <div className="bg-white border border-gray-100 rounded-lg overflow-hidden shadow-sm">
       {/* Table header — desktop only */}
       <div
@@ -108,7 +137,12 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
         </span>
       </div>
 
-      {orders.map((order) => {
+      {filteredOrders.length === 0 && (
+        <div className="px-6 py-16 text-center text-sm text-gray-400">
+          No orders found for &ldquo;{searchTerm}&rdquo;.
+        </div>
+      )}
+      {filteredOrders.map((order) => {
         const isExpanded = expandedId === order.id;
         return (
           <div key={order.id} className="border-b border-gray-50 last:border-b-0">
@@ -255,6 +289,7 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

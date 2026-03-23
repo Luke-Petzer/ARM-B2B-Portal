@@ -1,30 +1,12 @@
 import { adminClient } from "@/lib/supabase/admin";
 import ClientsTable, { type UnpaidOrder } from "./ClientsTable";
 
-const PAGE_SIZE = 20;
-
-interface PageProps {
-  searchParams: Promise<{ page?: string; search?: string }>;
-}
-
-export default async function AdminClientsPage({ searchParams }: PageProps) {
-  const { page: pageStr, search } = await searchParams;
-  const page = Math.max(1, parseInt(pageStr ?? "1", 10));
-
-  let query = adminClient
+export default async function AdminClientsPage() {
+  const { data: clients } = await adminClient
     .from("profiles")
-    .select("*", { count: "exact" })
+    .select("*")
     .in("role", ["buyer_default", "buyer_30_day"])
-    .order("business_name", { ascending: true })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-
-  if (search) {
-    query = query.or(
-      `business_name.ilike.%${search}%,account_number.ilike.%${search}%,contact_name.ilike.%${search}%`
-    );
-  }
-
-  const { data: clients, count } = await query;
+    .order("business_name", { ascending: true });
 
   const rows = (clients ?? []).map((c) => ({
     id: c.id,
@@ -43,7 +25,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
     is_active: c.is_active,
   }));
 
-  // Fetch unpaid orders for all 30-day clients on this page
+  // Fetch unpaid orders for all 30-day clients
   const thirtyDayIds = rows
     .filter((r) => r.role === "buyer_30_day")
     .map((r) => r.id);
@@ -85,10 +67,6 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
 
       <ClientsTable
         clients={rows}
-        totalCount={count ?? 0}
-        page={page}
-        pageSize={PAGE_SIZE}
-        search={search ?? ""}
         unpaidOrdersByClientId={unpaidOrdersByClientId}
       />
     </div>
