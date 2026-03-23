@@ -172,11 +172,11 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
           {/* Download invoice PDF */}
           <a
             href={`/api/invoice/${order.id}`}
-            download={`Invoice-${order.reference_number}.pdf`}
+            download={`Proforma-${order.reference_number}.pdf`}
             className="w-full h-12 flex items-center justify-center gap-2 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 active:scale-[0.98] transition-all mb-6"
           >
             <Download className="w-5 h-5" />
-            Download Invoice PDF
+            Download Proforma Invoice PDF
           </a>
 
           <p className="text-[13px] text-gray-400">

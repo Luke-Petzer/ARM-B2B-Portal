@@ -1,6 +1,3 @@
-// SQL Migration (run in Supabase SQL Editor):
-// ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_notes TEXT;
-
 "use server";
 
 import { redirect } from "next/navigation";
@@ -117,7 +114,7 @@ async function dispatchFulfillmentEmails(
       }),
       attachments: [
         {
-          filename: `Invoice-${order.reference_number}.pdf`,
+          filename: `Proforma-${order.reference_number}.pdf`,
           content: pdfBuffer,
         },
       ],
@@ -349,6 +346,8 @@ export async function markPaymentSubmittedAction(
   const orderId = formData.get("orderId") as string | null;
   if (!orderId) return { error: "Missing order ID." };
 
+  const buyerReference = (formData.get("buyer_reference") as string | null)?.trim() || null;
+
   // Verify this order belongs to the authenticated buyer
   const { data: order, error: fetchError } = await adminClient
     .from("orders")
@@ -361,6 +360,14 @@ export async function markPaymentSubmittedAction(
     return { error: "Order not found." };
   }
 
+  // Save PO number to buyer_reference if supplied
+  if (buyerReference) {
+    await adminClient
+      .from("orders")
+      .update({ buyer_reference: buyerReference })
+      .eq("id", orderId);
+  }
+
   // Insert a pending payment submission record
   const { error: paymentError } = await adminClient.from("payments").insert({
     order_id: order.id,
@@ -371,7 +378,7 @@ export async function markPaymentSubmittedAction(
 
   if (paymentError) {
     console.error("[payment] insert:", paymentError.message);
-    return { error: "Failed to record payment. Please try again." };
+    return { error: "Failed to submit order. Please try again." };
   }
 
   redirect(`/checkout/confirmed?orderId=${orderId}` as Route);

@@ -53,7 +53,7 @@ return new NextResponse(pdfBuffer as any, {
   status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="Invoice-${order.reference_number}.pdf"`,
+      "Content-Disposition": `attachment; filename="Proforma-${order.reference_number}.pdf"`,
     },
   });
 }

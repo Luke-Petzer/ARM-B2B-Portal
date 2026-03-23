@@ -368,7 +368,7 @@ function Header({ order, config }: { order: Order; config: TenantConfig }) {
 
       {/* Right — invoice title + ref */}
       <View style={styles.invoiceTitleBlock}>
-        <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
+        <Text style={styles.invoiceTitle}>PROFORMA INVOICE</Text>
         <Text style={styles.invoiceRef}>#{order.reference_number}</Text>
         <Text style={styles.invoiceDate}>
           Date: {fmtDate(order.created_at)}

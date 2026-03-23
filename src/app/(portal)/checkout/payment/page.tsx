@@ -64,10 +64,10 @@ export default async function PaymentPage({ searchParams }: PageProps) {
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-12 pb-24">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-slate-900">
-            Complete Payment
+            Review & Submit Order
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Transfer the amount below using EFT and use the reference provided.
+            Review your order and banking details below. Once submitted, your Proforma Invoice will be generated and emailed to you.
           </p>
         </div>
 
@@ -203,16 +203,15 @@ export default async function PaymentPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            {/* Important notice */}
+            {/* Payment reference notice */}
             <div className="flex items-start gap-4 p-4 bg-amber-50 border border-amber-100 rounded-lg mb-6 text-[12px] text-amber-800">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
               <p>
-                Use <strong>{bankRef}</strong> as your payment reference so we
-                can match your transfer.
+                When making your EFT, use <strong>{bankRef}</strong> as your payment reference so we can match your transfer.
               </p>
             </div>
 
-            {/* Confirm payment */}
+            {/* Submit form */}
             <PaymentForm orderId={order.id} bankRef={bankRef} />
           </div>
         </div>
