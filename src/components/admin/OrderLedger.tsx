@@ -288,62 +288,20 @@ export default function OrderLedger({
     setLiveCount(totalCount);
   }, [initialOrders, totalCount]);
 
-  // Supabase Realtime subscription — INSERT and UPDATE on orders table
+  // Supabase Realtime — Broadcast channel.
+  // The checkoutAction sends a broadcast ping via REST after each order insert.
+  // This approach avoids postgres_changes RLS evaluation entirely — no policies,
+  // no WAL publication concerns, no auth token injection needed.
+  // On broadcast: router.refresh() re-runs the server component so the full order
+  // (with profile join and items) flows back in via the initialOrders sync above.
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
 
     const channel = supabase
-      .channel("admin-orders-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        (payload) => {
-          // The INSERT payload contains base columns but not joined data
-          // (business_name, items). Prepend with available fields, then
-          // router.refresh() so the server re-fetches full data.
-          const row = payload.new as {
-            id: string;
-            reference_number: string;
-            created_at: string;
-            status: string;
-            payment_method: string;
-            subtotal: number;
-            vat_amount: number;
-            total_amount: number;
-            order_notes: string | null;
-          };
-          const newOrder: OrderRow = {
-            id: row.id,
-            reference_number: row.reference_number,
-            created_at: row.created_at,
-            status: row.status,
-            payment_method: row.payment_method,
-            subtotal: Number(row.subtotal),
-            vat_amount: Number(row.vat_amount),
-            total_amount: Number(row.total_amount),
-            business_name: "—",
-            account_number: null,
-            order_notes: row.order_notes,
-            items: [],
-          };
-          setOrders((prev) => [newOrder, ...prev]);
-          setLiveCount((prev) => prev + 1);
-          // Refresh server component so full join data (client name, items) loads in
-          router.refresh();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        (payload) => {
-          const updated = payload.new as { id: string; status: string };
-          setOrders((prev) =>
-            prev.map((o) =>
-              o.id === updated.id ? { ...o, status: updated.status } : o
-            )
-          );
-        }
-      )
+      .channel("admin-orders")
+      .on("broadcast", { event: "new_order" }, () => {
+        router.refresh();
+      })
       .subscribe();
 
     return () => {

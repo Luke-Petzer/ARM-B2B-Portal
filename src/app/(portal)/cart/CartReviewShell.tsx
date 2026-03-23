@@ -28,14 +28,15 @@ interface CartReviewShellProps {
 }
 
 export default function CartReviewShell({ reorderItems }: CartReviewShellProps) {
-  const { items, updateQuantity, removeItem, subtotal, addItem } = useCartStore();
+  const { items, updateQuantity, removeItem, subtotal, addItem, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
-  // Merge reorder items into cart on mount
+  // Replace cart with reorder items on mount (clear first to prevent quantity accumulation)
   useEffect(() => {
     if (!reorderItems) return;
+    clearCart();
     reorderItems.forEach((item) => {
       if (item.productId) {
         addItem({

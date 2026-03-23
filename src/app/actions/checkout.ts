@@ -169,7 +169,6 @@ export async function checkoutAction(
   if (!session) redirect("/login" as Route);
 
   // 2. Validate cart payload (passed from client Zustand store)
-  console.log("[checkout] rawItems received:", JSON.stringify(rawItems));
   const parsed = CheckoutSchema.safeParse(rawItems);
   if (!parsed.success) {
     console.error("[checkout] Zod validation failed:", JSON.stringify(parsed.error.issues, null, 2));
@@ -311,7 +310,24 @@ export async function checkoutAction(
     .eq("id", session.profileId)
     .single();
 
-  // 9. Dispatch fulfillment emails (non-blocking — failure must not abort checkout)
+  // 9. Broadcast to admin Realtime channel so the Order Ledger updates live.
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+      },
+      body: JSON.stringify({
+        messages: [{ topic: "admin-orders", event: "new_order", payload: { orderId: order.id } }],
+      }),
+    });
+  } catch (err) {
+    console.error("[broadcast] fetch failed:", err);
+  }
+
+  // 10. Dispatch fulfillment emails (non-blocking — failure must not abort checkout)
   if (profile) {
     dispatchFulfillmentEmails(order, insertedItems, profile, config).catch(
       (err: unknown) =>
