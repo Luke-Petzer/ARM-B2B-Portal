@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, CheckCircle2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createClientAction, updateClientAction } from "@/app/actions/admin";
+import { createClientAction, updateClientAction, markOrderSettledAction } from "@/app/actions/admin";
+import type { UnpaidOrder } from "@/app/(admin)/admin/clients/ClientsTable";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,6 +45,7 @@ interface ClientDrawerProps {
   onClose: () => void;
   onSaved: () => void;
   client?: ClientForDrawer | null;
+  unpaidOrders?: UnpaidOrder[];
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,127 @@ function InputField({
   );
 }
 
+function fmtCurrency(n: number) {
+  return `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Credit Utilization section
+// ---------------------------------------------------------------------------
+
+function CreditSection({
+  client,
+  unpaidOrders,
+  onSettled,
+}: {
+  client: ClientForDrawer;
+  unpaidOrders: UnpaidOrder[];
+  onSettled: () => void;
+}) {
+  const creditLimit = client.credit_limit ?? 0;
+  const creditUsed = unpaidOrders.reduce((sum, o) => sum + o.total_amount, 0);
+  const available = creditLimit - creditUsed;
+  const pct = creditLimit > 0 ? Math.min(100, (creditUsed / creditLimit) * 100) : 0;
+  const isCritical = pct >= 90;
+
+  const [settlingId, setSettlingId] = useState<string | null>(null);
+  const [settleError, setSettleError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const handleSettle = (orderId: string) => {
+    setSettlingId(orderId);
+    setSettleError(null);
+    startTransition(async () => {
+      const result = await markOrderSettledAction(orderId);
+      if (result.error) {
+        setSettleError(result.error);
+        setSettlingId(null);
+      } else {
+        onSettled();
+        setSettlingId(null);
+      }
+    });
+  };
+
+  return (
+    <div className="pt-2 border-t border-slate-100 space-y-4">
+      {/* Progress bar */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <FieldLabel>Credit Utilization</FieldLabel>
+          <span className={`text-[11px] font-medium ${isCritical ? "text-red-600" : "text-slate-400"}`}>
+            {pct.toFixed(0)}%
+          </span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${isCritical ? "bg-red-500" : "bg-primary"}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-[11px] text-slate-500">
+            {fmtCurrency(creditUsed)} utilized
+          </span>
+          <span className="text-[11px] text-slate-500">
+            {fmtCurrency(Math.max(0, available))} available of {fmtCurrency(creditLimit)}
+          </span>
+        </div>
+      </div>
+
+      {/* Unpaid orders list */}
+      <div>
+        <FieldLabel>Unpaid Orders</FieldLabel>
+        {unpaidOrders.length === 0 ? (
+          <p className="text-[12px] text-slate-400 py-2">No outstanding orders.</p>
+        ) : (
+          <div className="space-y-2">
+            {settleError && (
+              <p className="text-xs text-red-600">{settleError}</p>
+            )}
+            {unpaidOrders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-slate-900">
+                    #{order.reference_number}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {fmtDate(order.created_at)} · {fmtCurrency(order.total_amount)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={settlingId === order.id}
+                  onClick={() => handleSettle(order.id)}
+                  className="shrink-0 h-7 px-3 text-[11px] font-medium bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {settlingId === order.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3 h-3" />
+                  )}
+                  Settle
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -97,6 +220,7 @@ export default function ClientDrawer({
   onClose,
   onSaved,
   client,
+  unpaidOrders = [],
 }: ClientDrawerProps) {
   const isEdit = Boolean(client);
   const [isPending, startTransition] = useTransition();
@@ -136,7 +260,7 @@ export default function ClientDrawer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:w-[400px] p-0 flex flex-col gap-0"
+        className="w-full sm:w-[420px] p-0 flex flex-col gap-0"
       >
         <SheetHeader className="h-16 px-6 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
           <SheetTitle className="text-lg font-semibold text-slate-900">
@@ -250,22 +374,6 @@ export default function ClientDrawer({
                       placeholder="30"
                     />
                   </div>
-
-                  <div>
-                    <FieldLabel>Available Credit (R)</FieldLabel>
-                    <input
-                      type="number"
-                      name="available_credit"
-                      min={0}
-                      step="0.01"
-                      defaultValue={client?.available_credit ?? ""}
-                      placeholder="e.g. 25000.00"
-                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">
-                      Current available balance. Adjust manually to reflect payments received or credit resets.
-                    </p>
-                  </div>
                 </>
               )}
 
@@ -276,6 +384,15 @@ export default function ClientDrawer({
                 placeholder="e.g. 4123456789"
               />
             </div>
+
+            {/* Credit utilization (30-day edit mode only) */}
+            {isEdit && is30Day && client && (
+              <CreditSection
+                client={client}
+                unpaidOrders={unpaidOrders}
+                onSettled={onSaved}
+              />
+            )}
 
             {/* Notes */}
             <div className="pt-2 border-t border-slate-100">

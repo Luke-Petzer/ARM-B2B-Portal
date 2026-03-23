@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, MoreHorizontal, ChevronRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import ClientDrawer, {
   type ClientForDrawer,
 } from "@/components/admin/ClientDrawer";
+
+export interface UnpaidOrder {
+  id: string;
+  reference_number: string;
+  created_at: string;
+  total_amount: number;
+}
 
 interface ClientsTableProps {
   clients: ClientForDrawer[];
@@ -13,6 +20,7 @@ interface ClientsTableProps {
   page: number;
   pageSize: number;
   search: string;
+  unpaidOrdersByClientId: Record<string, UnpaidOrder[]>;
 }
 
 function RoleBadge({ role }: { role: "buyer_default" | "buyer_30_day" }) {
@@ -51,11 +59,11 @@ export default function ClientsTable({
   page,
   pageSize,
   search,
+  unpaidOrdersByClientId,
 }: ClientsTableProps) {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<ClientForDrawer | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -71,7 +79,6 @@ export default function ClientsTable({
   const handleOpenEdit = (client: ClientForDrawer) => {
     setEditClient(client);
     setDrawerOpen(true);
-    setOpenMenuId(null);
   };
 
   const buildPageUrl = (p: number) => {
@@ -185,30 +192,14 @@ export default function ClientsTable({
                   <td className="px-6 py-4">
                     <StatusBadge active={client.is_active} />
                   </td>
-                  <td className="px-6 py-4 text-right relative">
+                  <td className="px-6 py-4 text-right">
                     <button
                       type="button"
-                      onClick={() =>
-                        setOpenMenuId(
-                          openMenuId === client.id ? null : client.id
-                        )
-                      }
-                      className="text-slate-400 hover:text-slate-600 transition-colors"
+                      onClick={() => handleOpenEdit(client)}
+                      className="h-8 px-3 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                     >
-                      <MoreHorizontal className="w-5 h-5" />
+                      Edit
                     </button>
-                    {openMenuId === client.id && (
-                      <div className="absolute right-6 top-full mt-1 w-32 bg-white rounded-lg border border-slate-200 shadow-lg z-10 py-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(client)}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
-                        >
-                          <ChevronRight className="w-3 h-3" />
-                          Edit
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))
@@ -251,6 +242,7 @@ export default function ClientsTable({
         onClose={() => setDrawerOpen(false)}
         onSaved={handleSaved}
         client={editClient}
+        unpaidOrders={editClient ? (unpaidOrdersByClientId[editClient.id] ?? []) : []}
       />
     </>
   );

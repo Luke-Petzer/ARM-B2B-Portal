@@ -1,5 +1,5 @@
 import { adminClient } from "@/lib/supabase/admin";
-import ClientsTable from "./ClientsTable";
+import ClientsTable, { type UnpaidOrder } from "./ClientsTable";
 
 const PAGE_SIZE = 20;
 
@@ -43,6 +43,35 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
     is_active: c.is_active,
   }));
 
+  // Fetch unpaid orders for all 30-day clients on this page
+  const thirtyDayIds = rows
+    .filter((r) => r.role === "buyer_30_day")
+    .map((r) => r.id);
+
+  let unpaidOrdersByClientId: Record<string, UnpaidOrder[]> = {};
+
+  if (thirtyDayIds.length > 0) {
+    const { data: unpaidOrders } = await adminClient
+      .from("orders")
+      .select("id, reference_number, created_at, total_amount, profile_id")
+      .in("profile_id", thirtyDayIds)
+      .eq("payment_status", "unpaid")
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false });
+
+    for (const o of unpaidOrders ?? []) {
+      if (!unpaidOrdersByClientId[o.profile_id]) {
+        unpaidOrdersByClientId[o.profile_id] = [];
+      }
+      unpaidOrdersByClientId[o.profile_id].push({
+        id: o.id,
+        reference_number: o.reference_number,
+        created_at: o.created_at,
+        total_amount: Number(o.total_amount),
+      });
+    }
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -60,6 +89,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
         page={page}
         pageSize={PAGE_SIZE}
         search={search ?? ""}
+        unpaidOrdersByClientId={unpaidOrdersByClientId}
       />
     </div>
   );

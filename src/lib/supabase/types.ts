@@ -403,6 +403,7 @@ export interface Database {
           delivery_instructions: string | null;
           notes: string | null;
           order_notes: string | null;
+          payment_status: string;
           confirmed_at: string | null;
           fulfilled_at: string | null;
           cancelled_at: string | null;
@@ -424,6 +425,7 @@ export interface Database {
           delivery_instructions?: string | null;
           notes?: string | null;
           order_notes?: string | null;
+          payment_status?: string;
           confirmed_at?: string | null;
           fulfilled_at?: string | null;
           cancelled_at?: string | null;
@@ -445,6 +447,7 @@ export interface Database {
           delivery_instructions?: string | null;
           notes?: string | null;
           order_notes?: string | null;
+          payment_status?: string;
           confirmed_at?: string | null;
           fulfilled_at?: string | null;
           cancelled_at?: string | null;

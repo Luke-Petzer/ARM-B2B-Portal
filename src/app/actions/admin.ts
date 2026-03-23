@@ -789,3 +789,21 @@ export async function saveGlobalBannerAction(
   return { success: true };
 }
 
+// ---------------------------------------------------------------------------
+// markOrderSettledAction — mark a single order as paid (credit settlement)
+// ---------------------------------------------------------------------------
+
+export async function markOrderSettledAction(
+  orderId: string
+): Promise<{ error?: string; success?: boolean }> {
+  const { error } = await adminClient
+    .from("orders")
+    .update({ payment_status: "paid" })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/clients");
+  return { success: true };
+}
+
