@@ -813,3 +813,23 @@ export async function markOrderSettledAction(
   return { success: true };
 }
 
+// ---------------------------------------------------------------------------
+// bulkMarkOrdersSettledAction — mark multiple orders as paid in one query
+// ---------------------------------------------------------------------------
+
+export async function bulkMarkOrdersSettledAction(
+  orderIds: string[]
+): Promise<{ error?: string; success?: boolean }> {
+  if (!orderIds.length) return { error: "No orders selected." };
+
+  const { error } = await adminClient
+    .from("orders")
+    .update({ payment_status: "paid" })
+    .in("id", orderIds);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/clients");
+  return { success: true };
+}
+
