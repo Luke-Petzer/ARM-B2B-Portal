@@ -2,26 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import ProductRow from "@/components/portal/ProductRow";
+import ProductGroupCard from "@/components/portal/ProductGroupCard";
 import CartSidebar from "@/components/portal/CartSidebar";
-
-interface ProductRowData {
-  productId: string;
-  sku: string;
-  name: string;
-  description: string | null;
-  details: string | null;
-  price: number;
-  primaryImageUrl: string | null;
-  // Discount fields
-  discountType: "percentage" | "fixed" | null;
-  discountThreshold: number | null;
-  discountValue: number | null;
-  // Category fields
-  categoryId: string | null;
-  categoryName: string | null;
-  categorySlug: string | null;
-}
+import { groupProductsByName } from "@/lib/catalogue/grouping";
+import type { ProductRowData } from "@/lib/catalogue/grouping";
 
 interface CategoryNav {
   id: string;
@@ -66,7 +50,12 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
   const [query, setQuery] = useState("");
   const isSearching = query.trim().length > 0;
 
-  /** Flat filtered list — used only when search is active */
+  /**
+   * Step 1: filter the flat product array.
+   * Grouping always runs AFTER this, so search results are naturally
+   * limited to matching products — the first variation in each group
+   * is already the one that matched the query.
+   */
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products;
@@ -79,12 +68,20 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
   }, [query, products]);
 
   /**
-   * Grouped by category — used when not searching.
-   * Order follows the `categories` array (admin-defined display_order),
-   * with uncategorised products appended last.
+   * Step 2a: group filtered results (used when searching).
+   * Because the flat filter runs first, a SKU search like "POLE03"
+   * produces a group with only that one variation — auto-selected.
+   */
+  const searchGroups = useMemo(
+    () => groupProductsByName(filtered),
+    [filtered]
+  );
+
+  /**
+   * Step 2b: group by category, then by base name within each category.
+   * Order follows the `categories` array (admin-defined display_order).
    */
   const grouped = useMemo(() => {
-    // Build ordered category buckets
     const buckets = new Map<
       string,
       { name: string; slug: string; items: ProductRowData[] }
@@ -92,7 +89,6 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
     for (const cat of categories) {
       buckets.set(cat.id, { name: cat.name, slug: cat.slug, items: [] });
     }
-    // Bucket for products with no category
     const uncategorised: ProductRowData[] = [];
 
     for (const product of products) {
@@ -103,9 +99,17 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
       }
     }
 
-    const result = Array.from(buckets.values()).filter((g) => g.items.length > 0);
+    const result = Array.from(buckets.values())
+      .filter((g) => g.items.length > 0)
+      .map((g) => ({ ...g, groups: groupProductsByName(g.items) }));
+
     if (uncategorised.length > 0) {
-      result.push({ name: "Other", slug: "uncategorised", items: uncategorised });
+      result.push({
+        name: "Other",
+        slug: "uncategorised",
+        items: uncategorised,
+        groups: groupProductsByName(uncategorised),
+      });
     }
     return result;
   }, [products, categories]);
@@ -118,7 +122,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
 
   return (
     <>
-      {/* SKU Search Bar — must be flex-shrink-0 so it never compresses the scrollable section */}
+      {/* Search Bar */}
       <div className="bg-white border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center px-6 md:px-8 h-[40px]">
           <Search className="w-4 h-4 text-gray-400 mr-3 flex-shrink-0" />
@@ -136,7 +140,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Product list */}
         <section className="flex-1 overflow-y-auto custom-scrollbar">
-          {/* ── Sticky category nav (hidden while searching) ── */}
+          {/* Sticky category nav (hidden while searching) */}
           {!isSearching && grouped.length > 1 && (
             <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
               <div
@@ -157,7 +161,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
           )}
 
           <div className="p-4 md:p-8">
-            {/* ── Search results (flat) ── */}
+            {/* Search results — grouped by base name */}
             {isSearching ? (
               <>
                 <h1 className="text-[22px] md:text-[28px] font-semibold text-slate-900 mb-6">
@@ -166,11 +170,14 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
                 <div className="border border-gray-100 rounded-xl overflow-hidden">
                   <TableHeader />
                   <div className="divide-y divide-gray-50">
-                    {filtered.map((p) => (
-                      <ProductRow key={p.productId} {...p} />
+                    {searchGroups.map((group) => (
+                      <ProductGroupCard
+                        key={group.baseName}
+                        group={group}
+                      />
                     ))}
                   </div>
-                  {filtered.length === 0 && (
+                  {searchGroups.length === 0 && (
                     <p className="text-sm text-gray-400 text-center py-16">
                       No products match &ldquo;{query}&rdquo;.
                     </p>
@@ -178,7 +185,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
                 </div>
               </>
             ) : (
-              /* ── Grouped category sections ── */
+              /* Grouped category sections */
               <>
                 <h1 className="text-[22px] md:text-[28px] font-semibold text-slate-900 mb-6">
                   Product Catalogue
@@ -203,8 +210,11 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
                       <div className="border border-gray-100 rounded-xl">
                         <TableHeader />
                         <div className="divide-y divide-gray-50">
-                          {group.items.map((p) => (
-                            <ProductRow key={p.productId} {...p} />
+                          {group.groups.map((productGroup) => (
+                            <ProductGroupCard
+                              key={productGroup.baseName}
+                              group={productGroup}
+                            />
                           ))}
                         </div>
                       </div>
