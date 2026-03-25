@@ -634,3 +634,260 @@ export async function renderInvoiceToBuffer(
   const buffer = await renderToBuffer(<InvoiceDocument {...props} />);
   return Buffer.from(buffer);
 }
+
+// ---------------------------------------------------------------------------
+// Dispatch Sheet
+// ---------------------------------------------------------------------------
+
+export interface DispatchSheetProps {
+  order: { reference_number: string; created_at: string; order_notes: string | null };
+  items: Array<{ sku: string; product_name: string; quantity: number }>;
+  profile: { business_name: string; contact_name: string };
+  deliveryAddress?: string | null;
+}
+
+const dsStyles = StyleSheet.create({
+  page: {
+    fontFamily: "Helvetica",
+    fontSize: 8,
+    color: C.black,
+    paddingTop: 48,
+    paddingBottom: 48,
+    paddingHorizontal: 48,
+    backgroundColor: C.white,
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: "Helvetica-Bold",
+    color: C.black,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 9,
+    color: C.mid,
+    marginBottom: 24,
+  },
+  rule: {
+    borderBottomWidth: 1,
+    borderBottomColor: C.rule,
+    marginBottom: 20,
+  },
+  ruleDark: {
+    borderBottomWidth: 1,
+    borderBottomColor: C.black,
+    marginBottom: 20,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    gap: 24,
+  },
+  metaBlock: {
+    flex: 1,
+  },
+  metaLabel: {
+    fontSize: 6.5,
+    fontFamily: "Helvetica-Bold",
+    color: C.light,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  metaValueLg: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: C.black,
+    marginBottom: 2,
+  },
+  metaValue: {
+    fontSize: 8,
+    color: C.mid,
+    lineHeight: 1.5,
+  },
+  deliveryBox: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.rule,
+    borderRadius: 4,
+    padding: 14,
+    marginBottom: 20,
+  },
+  deliveryLabel: {
+    fontSize: 6.5,
+    fontFamily: "Helvetica-Bold",
+    color: C.light,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  deliveryValue: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: C.black,
+    lineHeight: 1.5,
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: C.black,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  tableHeaderCell: {
+    fontSize: 6.5,
+    fontFamily: "Helvetica-Bold",
+    color: C.white,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: C.rule,
+  },
+  tableRowAlt: {
+    backgroundColor: C.bg,
+  },
+  tableCell: {
+    fontSize: 8,
+    color: C.black,
+    lineHeight: 1.4,
+  },
+  colSku: { width: 80 },
+  colDesc: { flex: 1 },
+  colQty: { width: 50, textAlign: "right" },
+  notesBox: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.rule,
+    borderRadius: 4,
+    padding: 14,
+    marginTop: 20,
+  },
+  notesLabel: {
+    fontSize: 6.5,
+    fontFamily: "Helvetica-Bold",
+    color: C.light,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  notesValue: {
+    fontSize: 8,
+    color: C.mid,
+    lineHeight: 1.6,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 24,
+    left: 48,
+    right: 48,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: C.rule,
+    paddingTop: 8,
+  },
+  footerText: {
+    fontSize: 7,
+    color: C.light,
+  },
+});
+
+function DispatchSheetDocument({ order, items, profile, deliveryAddress }: DispatchSheetProps) {
+  return (
+    <Document
+      title={`Dispatch Sheet ${order.reference_number}`}
+      subject={`Dispatch Sheet — ${profile.business_name}`}
+    >
+      <Page size="A4" style={dsStyles.page}>
+        {/* Title */}
+        <Text style={dsStyles.title}>Dispatch Sheet — {order.reference_number}</Text>
+        <Text style={dsStyles.subtitle}>
+          Date: {fmtDate(order.created_at)}
+        </Text>
+        <View style={dsStyles.ruleDark} />
+
+        {/* Client info */}
+        <View style={dsStyles.metaRow}>
+          <View style={dsStyles.metaBlock}>
+            <Text style={dsStyles.metaLabel}>Client</Text>
+            <Text style={dsStyles.metaValueLg}>{profile.business_name}</Text>
+            {profile.contact_name && (
+              <Text style={dsStyles.metaValue}>Attn: {profile.contact_name}</Text>
+            )}
+          </View>
+          <View style={dsStyles.metaBlock}>
+            <Text style={dsStyles.metaLabel}>Order Reference</Text>
+            <Text style={dsStyles.metaValueLg}>#{order.reference_number}</Text>
+            <Text style={dsStyles.metaValue}>Order Date: {fmtDate(order.created_at)}</Text>
+          </View>
+        </View>
+
+        {/* Delivery address */}
+        {deliveryAddress && (
+          <View style={dsStyles.deliveryBox}>
+            <Text style={dsStyles.deliveryLabel}>Delivery Address</Text>
+            <Text style={dsStyles.deliveryValue}>{deliveryAddress}</Text>
+          </View>
+        )}
+
+        <View style={dsStyles.rule} />
+
+        {/* Items table */}
+        <View>
+          <View style={dsStyles.tableHeader}>
+            <Text style={[dsStyles.tableHeaderCell, dsStyles.colSku]}>SKU</Text>
+            <Text style={[dsStyles.tableHeaderCell, dsStyles.colDesc]}>Product Name</Text>
+            <Text style={[dsStyles.tableHeaderCell, dsStyles.colQty]}>Qty</Text>
+          </View>
+          {items.map((item, idx) => (
+            <View
+              key={`${item.sku}-${idx}`}
+              style={[dsStyles.tableRow, idx % 2 !== 0 ? dsStyles.tableRowAlt : {}]}
+            >
+              <Text style={[dsStyles.tableCell, dsStyles.colSku]}>{item.sku}</Text>
+              <Text style={[dsStyles.tableCell, dsStyles.colDesc]}>{item.product_name}</Text>
+              <Text style={[dsStyles.tableCell, dsStyles.colQty]}>{item.quantity}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Order notes */}
+        {order.order_notes && (
+          <View style={dsStyles.notesBox}>
+            <Text style={dsStyles.notesLabel}>Order Notes / Delivery Instructions</Text>
+            <Text style={dsStyles.notesValue}>{order.order_notes}</Text>
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={dsStyles.footer} fixed>
+          <Text style={dsStyles.footerText}>
+            Dispatch Sheet — {order.reference_number}
+          </Text>
+          <Text
+            style={dsStyles.footerText}
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} of ${totalPages}`
+            }
+          />
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
+/**
+ * Renders the dispatch sheet to a Node Buffer (for Resend email attachment).
+ * Must only be called in a server context.
+ */
+export async function renderDispatchSheetToBuffer(
+  props: DispatchSheetProps
+): Promise<Buffer> {
+  const buffer = await renderToBuffer(<DispatchSheetDocument {...props} />);
+  return Buffer.from(buffer);
+}

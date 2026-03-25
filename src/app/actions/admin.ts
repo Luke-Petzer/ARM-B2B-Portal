@@ -7,6 +7,8 @@ import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import ClientStatement from "@/emails/ClientStatement";
+import DispatchNotification from "@/emails/DispatchNotification";
+import { renderDispatchSheetToBuffer } from "@/lib/pdf/invoice";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 
@@ -148,6 +150,117 @@ export async function updateAdminRoleAction(
 }
 
 // ---------------------------------------------------------------------------
+// sendDispatchEmail (internal — non-fatal, fire-and-forget)
+// ---------------------------------------------------------------------------
+
+async function sendDispatchEmail(orderId: string): Promise<void> {
+  try {
+    // 1. Fetch order
+    const { data: order } = await adminClient
+      .from("orders")
+      .select("id, reference_number, created_at, order_notes, profile_id")
+      .eq("id", orderId)
+      .single();
+
+    if (!order) {
+      console.warn("[dispatch] order not found:", orderId);
+      return;
+    }
+
+    // 2. Fetch order items
+    const { data: items } = await adminClient
+      .from("order_items")
+      .select("sku, product_name, quantity")
+      .eq("order_id", orderId);
+
+    // 3. Fetch buyer profile
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("business_name, contact_name")
+      .eq("id", order.profile_id)
+      .single();
+
+    if (!profile) {
+      console.warn("[dispatch] profile not found for order:", orderId);
+      return;
+    }
+
+    // 4. Fetch tenant config
+    const { data: config } = await adminClient
+      .from("tenant_config")
+      .select("dispatch_email, business_name, email_from_name")
+      .eq("id", 1)
+      .single();
+
+    const dispatchEmail = config?.dispatch_email?.trim() || null;
+    if (!dispatchEmail) {
+      console.warn("[dispatch] dispatch_email not configured — skipping dispatch notification");
+      return;
+    }
+
+    const resendKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.RESEND_FROM_EMAIL;
+    if (!resendKey || !fromEmail) {
+      console.warn("[dispatch] RESEND_API_KEY or RESEND_FROM_EMAIL not set — skipping dispatch email");
+      return;
+    }
+
+    // 5. Render dispatch sheet PDF
+    const dispatchItems = (items ?? []).map((i) => ({
+      sku: i.sku,
+      product_name: i.product_name,
+      quantity: i.quantity,
+    }));
+
+    const pdfBuffer = await renderDispatchSheetToBuffer({
+      order: {
+        reference_number: order.reference_number,
+        created_at: order.created_at,
+        order_notes: order.order_notes ?? null,
+      },
+      items: dispatchItems,
+      profile: {
+        business_name: profile.business_name,
+        contact_name: profile.contact_name ?? "",
+      },
+    });
+
+    // 6. Send email
+    const supplierName = config?.business_name ?? "Your Supplier";
+    const fromAddress = config?.email_from_name
+      ? `${config.email_from_name} <${fromEmail}>`
+      : fromEmail;
+
+    const resend = new Resend(resendKey);
+    const { error } = await resend.emails.send({
+      from: fromAddress,
+      to: [dispatchEmail],
+      subject: `Dispatch: ${order.reference_number}`,
+      react: DispatchNotification({
+        orderReference: order.reference_number,
+        clientBusinessName: profile.business_name,
+        orderDate: order.created_at,
+        itemCount: dispatchItems.length,
+        orderNotes: order.order_notes ?? null,
+        supplierName,
+      }),
+      attachments: [
+        {
+          filename: `Dispatch-${order.reference_number}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+
+    if (error) {
+      console.error("[dispatch] email send failed:", error.message);
+    }
+  } catch (err) {
+    console.error("[dispatch] sendDispatchEmail error:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // approveOrderAction
 // ---------------------------------------------------------------------------
 
@@ -216,8 +329,11 @@ export async function approveOrderAction(
     return { error: "Failed to approve order. Please try again." };
   }
 
-  // Dispatch email only fires on first approval — Phase 5 will implement sendDispatchEmail
-  // if (isFirstApproval) { sendDispatchEmail(orderId).catch(console.error); }
+  if (isFirstApproval) {
+    sendDispatchEmail(orderId).catch((err: unknown) =>
+      console.error("[dispatch] unhandled error:", err)
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -845,6 +961,7 @@ export async function updateTenantConfigAction(
       bank_swift_code:
         (formData.get("bank_swift_code") as string | null)?.trim() || null,
       bank_reference_prefix: bankRefPrefix,
+      dispatch_email: (formData.get("dispatch_email") as string | null)?.trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);

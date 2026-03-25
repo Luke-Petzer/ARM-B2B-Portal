@@ -241,6 +241,27 @@ export default function SettingsForm({ config }: SettingsFormProps) {
       </SectionCard>
 
       {/* ------------------------------------------------------------------ */}
+      {/* Card 3 — Notifications                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <SectionCard
+        title="Notifications"
+        description="Configure where automated system emails are delivered."
+      >
+        <div>
+          <InputField
+            name="dispatch_email"
+            label="Dispatch Email"
+            type="email"
+            defaultValue={config.dispatch_email}
+            placeholder="dispatch@yourdomain.com"
+          />
+          <p className="text-[11px] text-slate-400 mt-1">
+            Orders are emailed here when first approved for dispatch.
+          </p>
+        </div>
+      </SectionCard>
+
+      {/* ------------------------------------------------------------------ */}
       {/* Sticky footer                                                        */}
       {/* ------------------------------------------------------------------ */}
       <div className="fixed bottom-0 left-[250px] right-0 h-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 flex items-center justify-between px-8 z-20">
