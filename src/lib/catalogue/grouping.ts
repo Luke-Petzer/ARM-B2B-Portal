@@ -2,34 +2,8 @@
  * Frontend-only grouping utilities for the Buyer Catalogue.
  * No database, Zod schema, or Cart store changes required.
  *
- * Naming convention across all 142 SKUs:
- *   Products that share a base spec but differ only by length/orientation/size
- *   are named  "Base Name (Variant)" — e.g. "Carport Pole Round 76x1.2mm (3.0m)"
- *
- * The only exception: L-Plates use single-letter dimension labels in parentheses
- *   e.g. "L-Plate 50(h) x 50(w) x 20(l)" — (h), (w), (l) are NOT grouping variants.
- *
- * Algorithm — extractBaseAndVariation():
- *   1. Find the last "(" and its closing ")".
- *   2. If the content is a single letter  (h / w / l / d) → standalone product.
- *   3. Otherwise:
- *      baseName  = text BEFORE the "(" + any text AFTER the ")" (e.g. thickness suffix)
- *      variation = text INSIDE the parentheses
- *   4. No parentheses at all → standalone product (variation = "Standard").
- *
- * This correctly handles every product in the catalogue:
- *   "Carport Pole Round 76x1.2mm (3.0m)"    → base "Carport Pole Round 76x1.2mm"  var "3.0m"
- *   "Galv. Bracing Strap 25mm (30m)"        → base "Galv. Bracing Strap 25mm"     var "30m"
- *   "AR Palisade Spike 30x30x2mm (400mm)"   → base "AR Palisade Spike 30x30x2mm"  var "400mm"
- *   "Hurricane Clip (Left)"                  → base "Hurricane Clip"               var "Left"
- *   "Gate Wheel in Casing 80mm (V-Groove)"  → base "Gate Wheel in Casing 80mm"    var "V-Groove"
- *   "Galv. Flashing Sidewall 230x75mm (2.4m) 0.4mm"
- *                                            → base "Galv. Flashing Sidewall 230x75mm 0.4mm"
- *                                              var "2.4m"   (thickness stays in base name
- *                                                            so 0.3mm ≠ 0.4mm — no false grouping)
- *   "L-Plate 50(h) x 50(w) x 20(l)"        → standalone  (single-letter guard)
- *   "Galv. Truss Hanger 38mm"               → standalone  (no parens)
- *   "Gate Catch 32mm"                        → standalone  (no parens)
+ * Four rules applied in priority order — see groupProductsByName() for the
+ * two-pass implementation that enables the dynamic galvanised-pair matching.
  */
 
 // ---------------------------------------------------------------------------
@@ -62,58 +36,175 @@ export interface ProductGroup {
 }
 
 // ---------------------------------------------------------------------------
-// Core parser
+// Rule 1 — Galvanised-pair prefixes
 // ---------------------------------------------------------------------------
 
-export function extractBaseAndVariation(name: string): {
-  baseName: string;
-  variation: string;
-} {
-  const lastOpen = name.lastIndexOf("(");
-  if (lastOpen === -1) {
-    // No parentheses — standalone product
-    return { baseName: name.trim(), variation: "Standard" };
-  }
+const GALV_PREFIXES = ["Electro-Galv. ", "Galv. "] as const;
 
-  const lastClose = name.indexOf(")", lastOpen);
-  if (lastClose === -1) {
-    // Unmatched "(" — treat as standalone to be safe
-    return { baseName: name.trim(), variation: "Standard" };
-  }
+// ---------------------------------------------------------------------------
+// Rule 2 — Known prefix dictionary (sorted longest-first to prevent a
+// shorter prefix shadowing a longer, more-specific one)
+// ---------------------------------------------------------------------------
 
-  const content = name.slice(lastOpen + 1, lastClose).trim();
+const KNOWN_PREFIXES: readonly string[] = [
+  "Argo StrikeMax Welding Rods",   // 27
+  "Galv. Flashing Barge Board",    // 26
+  "Washing Line Pole Round",        // 23
+  "Galv. Flashing Sidewall",        // 23
+  "Galv. Nylon Guide Track",        // 23
+  "Gate Wheel in Casing",           // 20
+  "Carport Pole Square",            // 19
+  "Galv. Bracing Strap",            // 19
+  "Carport Pole Round",             // 18
+  "AR Palisade Spike",              // 17
+  "Guide Nylon Wheel",              // 17
+  "Argo Cutting Disk",              // 17
+  "Lug 90° 50 x 25",               // 16
+  "Truss Nail Plate",               // 16
+  "Gate Wheel Loose",               // 15
+  "Galv. Hoop Iron",               // 15
+  "Argo Wheel Kit",                 // 14
+  "Lug Feet 16mm",                  // 13
+  "Lug 50 x 25",                    // 11
+  "L-Plate",                        // 7
+].sort((a, b) => b.length - a.length);
 
-  // Guard: L-Plate dimension labels are single letters (h, w, l, d).
-  // They are part of the product's own dimension notation, not grouping variants.
-  if (/^[a-zA-Z]$/.test(content)) {
-    return { baseName: name.trim(), variation: "Standard" };
-  }
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  const before = name.slice(0, lastOpen).trim();
-  // Text after the closing ")" — e.g. "0.4mm" thickness in flashing names.
-  // Fold it back into the base name so products with different suffixes do
-  // NOT get incorrectly grouped together.
-  const after = name.slice(lastClose + 1).trim();
-
-  const baseName = after ? `${before} ${after}` : before;
-
-  return {
-    baseName: baseName || name.trim(),
-    variation: content || "Standard",
-  };
+/**
+ * Cleans the remainder string produced by Rule 2 prefix stripping.
+ * - Removes "(" and ")" characters
+ * - Removes isolated dimension-label letters (h, w, l, d) from L-Plate names
+ * - Collapses whitespace
+ */
+function cleanVariation(raw: string): string {
+  return raw
+    .replace(/[()]/g, "")
+    .replace(/\b[hwld]\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // ---------------------------------------------------------------------------
-// Grouping function
-// Groups a flat product list by baseName, preserving the order of first
-// appearance so the catalogue follows the admin-defined SKU sort order.
+// Rule 3 — Trailing length patterns
+//
+// Handles products not caught by Rules 1 or 2 that still follow a
+// "Base Name (Length)" or "Base Name (Length) Suffix" convention.
+//
+// Pattern A: "Razor Wire Concertina (11m)"
+//   → base "Razor Wire Concertina", variation "11m"
+// Pattern B: "Galv. Flashing Sidewall 230x75mm (2.4m) 0.4mm"
+//   → would be caught by Rule 2 first; Pattern B is a safety net
+//   → base "Galv. Flashing Sidewall 230x75mm 0.4mm", variation "2.4m"
+// ---------------------------------------------------------------------------
+
+/** Matches "Base Name (Xm)" with an optional suffix after the closing paren */
+const RE_PAREN_LENGTH =
+  /^(.+?)\s*\((\d+(?:\.\d+)?m)\)\s*(.*)$/;
+
+/** Matches "Base Name Xm" (bare, no parens) */
+const RE_BARE_LENGTH = /^(.+)\s+(\d+(?:\.\d+)?m)$/;
+
+// ---------------------------------------------------------------------------
+// Core extraction function
+// ---------------------------------------------------------------------------
+
+function _extract(
+  name: string,
+  allNames: Set<string>,
+  galvPairedBaseNames: Set<string>
+): { baseName: string; variation: string } {
+
+  // ── Rule 1a: This name IS the "Standard" counterpart of a galv-prefixed pair ──
+  // (determined during the pre-pass in groupProductsByName)
+  if (galvPairedBaseNames.has(name)) {
+    return { baseName: name, variation: "Standard" };
+  }
+
+  // ── Rule 1b: Galv-prefixed product whose bare counterpart exists ─────────
+  for (const prefix of GALV_PREFIXES) {
+    if (name.startsWith(prefix)) {
+      const stripped = name.slice(prefix.length).trim();
+      if (allNames.has(stripped)) {
+        return {
+          baseName: stripped,
+          variation: prefix.trim(), // "Electro-Galv." or "Galv."
+        };
+      }
+      // Starts with a galv prefix but no counterpart — fall through to Rule 2
+      break;
+    }
+  }
+
+  // ── Rule 2: Known prefix dictionary ──────────────────────────────────────
+  for (const prefix of KNOWN_PREFIXES) {
+    if (name.startsWith(prefix)) {
+      const remainder = name.slice(prefix.length);
+      return {
+        baseName: prefix,
+        variation: cleanVariation(remainder) || "Standard",
+      };
+    }
+  }
+
+  // ── Rule 3: Trailing length token ────────────────────────────────────────
+  const parenMatch = RE_PAREN_LENGTH.exec(name);
+  if (parenMatch) {
+    const base = parenMatch[1].trim();
+    const length = parenMatch[2];
+    const suffix = parenMatch[3].trim();
+    return {
+      baseName: suffix ? `${base} ${suffix}` : base,
+      variation: length,
+    };
+  }
+
+  const bareMatch = RE_BARE_LENGTH.exec(name);
+  if (bareMatch) {
+    return { baseName: bareMatch[1].trim(), variation: bareMatch[2] };
+  }
+
+  // ── Rule 4: Standalone product ───────────────────────────────────────────
+  return { baseName: name.trim(), variation: "Standard" };
+}
+
+// ---------------------------------------------------------------------------
+// Public grouping function
+// Two-pass: first builds the galv-pair context, then classifies every product.
 // ---------------------------------------------------------------------------
 
 export function groupProductsByName(products: ProductRowData[]): ProductGroup[] {
+  // Build a Set of every exact product name for O(1) Rule-1 lookups
+  const allNames = new Set(products.map((p) => p.name));
+
+  // Pre-pass: identify all "standard" names that have a galv-prefixed twin.
+  // E.g. if "Electro-Galv. Lock Holder" exists and "Lock Holder" exists →
+  // "Lock Holder" goes into galvPairedBaseNames so it gets variation "Standard"
+  // instead of being processed by Rule 2/3/4 independently.
+  const galvPairedBaseNames = new Set<string>();
+  for (const product of products) {
+    for (const prefix of GALV_PREFIXES) {
+      if (product.name.startsWith(prefix)) {
+        const stripped = product.name.slice(prefix.length).trim();
+        if (allNames.has(stripped)) {
+          galvPairedBaseNames.add(stripped);
+        }
+        break;
+      }
+    }
+  }
+
+  // Main pass: classify each product and group by baseName
   const map = new Map<string, ProductVariant[]>();
 
   for (const product of products) {
-    const { baseName, variation } = extractBaseAndVariation(product.name);
+    const { baseName, variation } = _extract(
+      product.name,
+      allNames,
+      galvPairedBaseNames
+    );
     if (!map.has(baseName)) {
       map.set(baseName, []);
     }
