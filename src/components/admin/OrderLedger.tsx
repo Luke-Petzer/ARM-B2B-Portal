@@ -108,6 +108,61 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// ApproveDialog — reusable confirmation wrapper for approve buttons
+// ---------------------------------------------------------------------------
+
+function ApproveDialog({
+  label,
+  description,
+  confirmLabel = "Confirm Approval",
+  onConfirm,
+  isLoading,
+  variant = "primary",
+}: {
+  label: string;
+  description: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  isLoading: boolean;
+  variant?: "primary" | "secondary";
+}) {
+  const triggerClass =
+    variant === "primary"
+      ? "h-9 px-4 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+      : "h-9 px-4 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none";
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button type="button" disabled={isLoading} className={triggerClass}>
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CheckCircle className="w-4 h-4" />
+          )}
+          {label}
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirm: {label}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-sky-600 hover:bg-sky-700 text-white"
+          >
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Expanded row
 // ---------------------------------------------------------------------------
 
@@ -119,23 +174,28 @@ function ExpandedRow({
 }: {
   order: OrderRow;
   currentAdminProfileId: string;
-  onApproved: (id: string) => void;
+  onApproved: (id: string, update: { status?: string; payment_status: string }) => void;
   onAssigned: (id: string, assignedTo: string, email: string) => void;
 }) {
   const [isApproving, startApprove] = useTransition();
   const [isAssigning, startAssign] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const handleApprove = () => {
+  const handleApprove = (approvalType: "paid" | "credit_approved") => {
     setError(null);
     startApprove(async () => {
       const fd = new FormData();
       fd.set("orderId", order.id);
+      fd.set("approvalType", approvalType);
       const result = await approveOrderAction(fd);
       if (result?.error) {
         setError(result.error);
       } else {
-        onApproved(order.id);
+        const isFirstApproval = order.status === "pending";
+        onApproved(order.id, {
+          status: isFirstApproval ? "confirmed" : order.status,
+          payment_status: approvalType,
+        });
       }
     });
   };
@@ -262,41 +322,46 @@ function ExpandedRow({
               {error && (
                 <span className="text-xs text-red-600">{error}</span>
               )}
-              {/* Approve Order — visible for pending orders only */}
-              {order.status === "pending" && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={isApproving}
-                      className="h-9 px-4 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      {isApproving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="w-4 h-4" />
-                      )}
-                      Approve Order
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirm Order Approval</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will mark the order as paid and notify dispatch. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleApprove}
-                        className="bg-sky-600 hover:bg-sky-700 text-white"
-                      >
-                        Confirm Approval
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              {/* ── EFT: single "Approve & Mark Paid" ── */}
+              {order.status === "pending" && order.payment_method === "eft" && (
+                <ApproveDialog
+                  label="Approve & Mark Paid"
+                  description="This verifies payment and notifies dispatch. This action cannot be undone."
+                  onConfirm={() => handleApprove("paid")}
+                  isLoading={isApproving}
+                />
+              )}
+
+              {/* ── 30-Day: two buttons for pending orders ── */}
+              {order.status === "pending" && order.payment_method === "30_day_account" && (
+                <>
+                  <ApproveDialog
+                    label="Approve on Credit"
+                    description="Approves this order against the client's credit account. Revenue is recognised now."
+                    confirmLabel="Approve on Credit"
+                    onConfirm={() => handleApprove("credit_approved")}
+                    isLoading={isApproving}
+                    variant="secondary"
+                  />
+                  <ApproveDialog
+                    label="Approve & Mark Paid"
+                    description="Client is paying immediately. This marks the order as paid and notifies dispatch."
+                    onConfirm={() => handleApprove("paid")}
+                    isLoading={isApproving}
+                  />
+                </>
+              )}
+
+              {/* ── 30-Day: credit-approved order settling later ── */}
+              {order.status === "confirmed" && order.payment_status === "credit_approved" && (
+                <ApproveDialog
+                  label="Mark as Paid"
+                  description="Record that this credit account order has now been settled."
+                  confirmLabel="Confirm Payment"
+                  onConfirm={() => handleApprove("paid")}
+                  isLoading={isApproving}
+                  variant="secondary"
+                />
               )}
             </div>
           </div>
@@ -357,11 +422,14 @@ export default function OrderLedger({
 
   const totalPages = Math.ceil(liveCount / pageSize);
 
-  const handleApproved = useCallback((orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: "confirmed" } : o))
-    );
-  }, []);
+  const handleApproved = useCallback(
+    (orderId: string, update: { status?: string; payment_status: string }) => {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, ...update } : o))
+      );
+    },
+    []
+  );
 
   const handleAssigned = useCallback((orderId: string, assignedTo: string, _email: string) => {
     setOrders((prev) =>

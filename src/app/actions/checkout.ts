@@ -193,14 +193,14 @@ export async function checkoutAction(
   const productIds = items.map((i) => i.productId);
   const { data: productRows, error: productFetchError } = await adminClient
     .from("products")
-    .select("id, discount_type, discount_threshold, discount_value")
+    .select("id, cost_price, discount_type, discount_threshold, discount_value")
     .in("id", productIds);
 
   if (productFetchError || !productRows) {
     return { error: "Failed to fetch product discount data." };
   }
 
-  // Build a lookup map
+  // Build a lookup map (includes cost_price for order_items snapshot)
   const discountMap = new Map(productRows.map((p) => [p.id, p]));
 
   function computeEffectiveUnitPrice(
@@ -278,12 +278,14 @@ export async function checkoutAction(
     const discountPct = item.unitPrice > 0
       ? parseFloat(((discountSaving / item.unitPrice) * 100).toFixed(4))
       : 0;
+    const dbProduct = discountMap.get(item.productId);
     return {
       order_id: order.id,
       product_id: item.productId,
       sku: item.sku,
       product_name: item.name,
       unit_price: item.unitPrice,
+      cost_price: dbProduct?.cost_price ?? null, // snapshot at order time for daily report
       quantity: item.quantity,
       discount_pct: discountPct,
       line_total: lineTotals[idx],

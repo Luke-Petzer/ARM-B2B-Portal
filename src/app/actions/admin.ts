@@ -150,10 +150,17 @@ export async function updateAdminRoleAction(
 // ---------------------------------------------------------------------------
 
 /**
- * Transitions a pending order to "confirmed".
- * Does NOT call revalidatePath — mirrors markProcessedAction's pattern where
- * the calling client component handles the optimistic UI update via callback.
- * Guards against non-pending orders using an .eq("status", "pending") filter.
+ * Approves an order. Handles two transitions:
+ *
+ * 1. pending → confirmed  (first approval — fires dispatch email)
+ *    approvalType = 'paid'            → EFT verified / 30-day settling immediately
+ *    approvalType = 'credit_approved' → 30-day order approved on credit
+ *
+ * 2. confirmed + credit_approved → confirmed + paid  (credit client later settles)
+ *    approvalType = 'paid' (implied — no dispatch email, already sent)
+ *
+ * confirmed_at is always set on first approval so daily revenue reports
+ * attribute revenue to the approval date.
  */
 export async function approveOrderAction(
   formData: FormData
@@ -161,23 +168,54 @@ export async function approveOrderAction(
   await requireAdmin();
 
   const orderId = formData.get("orderId") as string | null;
+  const approvalType = (formData.get("approvalType") as string | null) ?? "paid";
   if (!orderId) return { error: "Missing order ID." };
+  if (approvalType !== "paid" && approvalType !== "credit_approved") {
+    return { error: "Invalid approval type." };
+  }
 
-  const { data, error } = await adminClient
+  // Fetch current state to determine which transition applies
+  const { data: currentOrder, error: fetchError } = await adminClient
     .from("orders")
-    .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+    .select("id, status, payment_status")
     .eq("id", orderId)
-    .eq("status", "pending") // guard: only transitions pending → confirmed
-    .select("id");
+    .single();
+
+  if (fetchError || !currentOrder) {
+    return { error: "Order not found." };
+  }
+
+  const isFirstApproval = currentOrder.status === "pending";
+  const isCreditSettlement =
+    currentOrder.status === "confirmed" &&
+    currentOrder.payment_status === "credit_approved";
+
+  if (!isFirstApproval && !isCreditSettlement) {
+    return { error: "Order cannot be approved in its current state." };
+  }
+
+  const updatePayload = isFirstApproval
+    ? {
+        status: "confirmed" as const,
+        payment_status: approvalType,
+        confirmed_at: new Date().toISOString(),
+      }
+    : {
+        payment_status: "paid" as const,
+      };
+
+  const { error } = await adminClient
+    .from("orders")
+    .update(updatePayload)
+    .eq("id", orderId);
 
   if (error) {
     console.error("[admin] approveOrder:", error.message);
     return { error: "Failed to approve order. Please try again." };
   }
 
-  if (!data || data.length === 0) {
-    return { error: "Order is no longer pending — it may have been updated by another session." };
-  }
+  // Dispatch email only fires on first approval — Phase 5 will implement sendDispatchEmail
+  // if (isFirstApproval) { sendDispatchEmail(orderId).catch(console.error); }
 }
 
 // ---------------------------------------------------------------------------
