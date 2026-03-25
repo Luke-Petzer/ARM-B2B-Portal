@@ -90,7 +90,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <NavBar />
+      <NavBar role={session.role} />
       <CatalogueShell products={rows} categories={categories} />
     </>
   );

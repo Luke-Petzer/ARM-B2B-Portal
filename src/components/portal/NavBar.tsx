@@ -8,13 +8,24 @@ import { Menu, X, Loader2, ShoppingCart } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useCartStore } from "@/lib/cart/store";
 import type { Route } from "next";
+import type { AppRole } from "@/lib/supabase/types";
 
-const NAV_LINKS: { href: Route; label: string }[] = [
+const BASE_NAV_LINKS: { href: Route; label: string }[] = [
   { href: "/dashboard", label: "Catalogue" },
   { href: "/orders", label: "Order History" },
 ];
 
-export default function NavBar() {
+interface NavBarProps {
+  role?: AppRole;
+}
+
+export default function NavBar({ role }: NavBarProps) {
+  const NAV_LINKS = [
+    ...BASE_NAV_LINKS,
+    ...(role === "buyer_30_day"
+      ? [{ href: "/dashboard/statement" as Route, label: "Statement" }]
+      : []),
+  ];
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, startLogout] = useTransition();

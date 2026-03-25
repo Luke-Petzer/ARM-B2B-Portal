@@ -50,7 +50,7 @@ export default async function OrdersPage() {
 
   return (
     <>
-      <NavBar />
+      <NavBar role={session.role} />
 
       <div className="flex-1 overflow-y-auto bg-[#fcfcfc]">
         <main className="max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-12 pb-24">
