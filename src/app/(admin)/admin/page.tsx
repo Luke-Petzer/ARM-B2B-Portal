@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { adminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
-import { Clock, Loader, TrendingUp, Users } from "lucide-react";
+import { Clock, Download, Loader, TrendingUp, Users } from "lucide-react";
 import OrderLedger from "@/components/admin/OrderLedger";
 import type { OrderRow } from "@/components/admin/OrderLedger";
 import type { Database } from "@/lib/supabase/types";
@@ -209,13 +209,25 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   return (
     <div>
       {/* Page title */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
-          Command Center
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Overview of your order pipeline and revenue metrics.
-        </p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+            Command Center
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Overview of your order pipeline and revenue metrics.
+          </p>
+        </div>
+
+        {adminRole === "manager" && (
+          <a
+            href="/api/reports/daily"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Download Today&apos;s Report
+          </a>
+        )}
       </div>
 
       {/* KPI cards */}
