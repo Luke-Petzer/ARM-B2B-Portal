@@ -22,10 +22,10 @@ export async function GET(req: Request): Promise<NextResponse> {
     date = new Date();
   }
 
-  // Format filename date as YYYY-MM-DD
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
+  // Format filename date as YYYY-MM-DD (UTC)
+  const yyyy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
   const fileDateStr = `${yyyy}-${mm}-${dd}`;
 
   try {

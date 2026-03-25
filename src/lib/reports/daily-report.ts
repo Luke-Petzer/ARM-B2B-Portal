@@ -26,17 +26,14 @@ function csvEsc(value: string): string {
  *   Ext Selling, Ext Cost
  */
 export async function generateDailyReportCsv(date: Date): Promise<string> {
-  // Build the day boundary in UTC-equivalent ISO strings
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  // Build the day boundary in UTC ISO strings
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   const startOfDay = `${year}-${month}-${day}T00:00:00.000Z`;
-  const startOfNextDay = new Date(date);
-  startOfNextDay.setDate(startOfNextDay.getDate() + 1);
-  const ny = startOfNextDay.getFullYear();
-  const nm = String(startOfNextDay.getMonth() + 1).padStart(2, "0");
-  const nd = String(startOfNextDay.getDate()).padStart(2, "0");
-  const endOfDay = `${ny}-${nm}-${nd}T00:00:00.000Z`;
+
+  const nextDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1));
+  const endOfDay = nextDay.toISOString().replace(/T.*/, "T00:00:00.000Z");
 
   const { data: orders, error } = await adminClient
     .from("orders")
@@ -83,6 +80,8 @@ export async function generateDailyReportCsv(date: Date): Promise<string> {
   const rows: string[] = [header];
 
   for (const order of orders ?? []) {
+    if (!order.confirmed_at) continue;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buyer = (order as any).buyer as RawBuyer;
     const items = ((order as any).order_items as RawItem[]) ?? [];
