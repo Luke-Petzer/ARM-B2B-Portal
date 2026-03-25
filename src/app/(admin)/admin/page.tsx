@@ -1,10 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import { adminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import { Clock, Loader, TrendingUp, Users } from "lucide-react";
 import OrderLedger from "@/components/admin/OrderLedger";
 import type { OrderRow } from "@/components/admin/OrderLedger";
 import type { Database } from "@/lib/supabase/types";
+import type { Route } from "next";
 
 const PAGE_SIZE = 20;
 
@@ -69,8 +72,14 @@ function KpiCard({
 // ---------------------------------------------------------------------------
 
 export default async function AdminCommandCenterPage({ searchParams }: PageProps) {
+  const session = await getSession();
+  if (!session?.isAdmin) redirect("/admin/login" as Route);
+
   const { page: pageStr, search, status, dateFrom, dateTo } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
+
+  const adminRole = session.adminRole ?? "employee";
+  const currentAdminProfileId = session.profileId;
 
   // ── KPI queries (parallel) ──────────────────────────────────────────────
   const [pendingResult, processingResult, revenueResult, clientCountResult] =
@@ -103,12 +112,16 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   const activeClients = clientCountResult.count ?? 0;
 
   // ── Order ledger query ──────────────────────────────────────────────────
+  // Use FK disambiguation since orders has two FKs to profiles:
+  //   profile_id  → buyer profile  (aliased as "buyer")
+  //   assigned_to → admin profile  (aliased as "assignee")
   let ordersQuery = adminClient
     .from("orders")
     .select(
-      `id, reference_number, created_at, status, payment_method,
+      `id, reference_number, created_at, status, payment_method, payment_status, assigned_to,
        subtotal, vat_amount, total_amount, order_notes,
-       profiles ( business_name, account_number ),
+       buyer:profiles!profile_id ( business_name, account_number ),
+       assignee:profiles!assigned_to ( email ),
        order_items ( sku, product_name, quantity, unit_price, line_total )`,
       { count: "exact" }
     )
@@ -116,13 +129,20 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (status) ordersQuery = ordersQuery.eq("status", status as OrderStatus);
-  // dateFrom/dateTo are YYYY-MM-DD strings — filter on created_at (inclusive)
   if (dateFrom) ordersQuery = ordersQuery.gte("created_at", `${dateFrom}T00:00:00.000Z`);
   if (dateTo)   ordersQuery = ordersQuery.lte("created_at", `${dateTo}T23:59:59.999Z`);
 
+  // RBAC filter — employees only see unassigned or their own orders
+  if (adminRole === "employee") {
+    ordersQuery = ordersQuery.or(
+      `assigned_to.is.null,assigned_to.eq.${currentAdminProfileId}`
+    );
+  }
+
   const { data: rawOrders, count: totalCount } = await ordersQuery;
 
-  type RawProfile = { business_name: string; account_number: string | null };
+  type RawBuyer = { business_name: string; account_number: string | null };
+  type RawAssignee = { email: string } | null;
   type RawItem = {
     sku: string;
     product_name: string;
@@ -132,18 +152,24 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   };
 
   const orders: OrderRow[] = (rawOrders ?? []).map((o) => {
-    const profile = o.profiles as RawProfile | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = o as any;
+    const buyer = raw.buyer as RawBuyer | null;
+    const assignee = raw.assignee as RawAssignee;
     return {
       id: o.id,
       reference_number: o.reference_number,
       created_at: o.created_at,
       status: o.status,
       payment_method: o.payment_method,
+      payment_status: (o as { payment_status?: string | null }).payment_status ?? null,
+      assigned_to: (o as { assigned_to?: string | null }).assigned_to ?? null,
+      assignee_email: assignee?.email ?? null,
       subtotal: Number(o.subtotal),
       vat_amount: Number(o.vat_amount),
       total_amount: Number(o.total_amount),
-      business_name: profile?.business_name ?? "—",
-      account_number: profile?.account_number ?? null,
+      business_name: buyer?.business_name ?? "—",
+      account_number: buyer?.account_number ?? null,
       order_notes: o.order_notes ?? null,
       items: (o.order_items as RawItem[]).map((item) => ({
         sku: item.sku,
@@ -276,6 +302,8 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         status={status ?? ""}
         dateFrom={dateFrom ?? ""}
         dateTo={dateTo ?? ""}
+        adminRole={adminRole}
+        currentAdminProfileId={currentAdminProfileId}
       />
     </div>
   );

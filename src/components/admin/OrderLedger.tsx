@@ -9,7 +9,7 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import { approveOrderAction, exportOrdersCsvAction } from "@/app/actions/admin";
+import { approveOrderAction, assignOrderAction, exportOrdersCsvAction } from "@/app/actions/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,9 @@ export interface OrderRow {
   created_at: string;
   status: string;
   payment_method: string;
+  payment_status: string | null;
+  assigned_to: string | null;
+  assignee_email: string | null;
   subtotal: number;
   vat_amount: number;
   total_amount: number;
@@ -58,6 +61,8 @@ interface OrderLedgerProps {
   status: string;
   dateFrom: string;
   dateTo: string;
+  adminRole: "manager" | "employee";
+  currentAdminProfileId: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,12 +113,17 @@ function StatusBadge({ status }: { status: string }) {
 
 function ExpandedRow({
   order,
+  currentAdminProfileId,
   onApproved,
+  onAssigned,
 }: {
   order: OrderRow;
+  currentAdminProfileId: string;
   onApproved: (id: string) => void;
+  onAssigned: (id: string, assignedTo: string, email: string) => void;
 }) {
   const [isApproving, startApprove] = useTransition();
+  const [isAssigning, startAssign] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const handleApprove = () => {
@@ -130,6 +140,27 @@ function ExpandedRow({
     });
   };
 
+  const handleAssign = () => {
+    setError(null);
+    startAssign(async () => {
+      const fd = new FormData();
+      fd.set("orderId", order.id);
+      const result = await assignOrderAction(fd);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        onAssigned(order.id, currentAdminProfileId, "you");
+      }
+    });
+  };
+
+  // Build the assignee display badge text
+  const assigneeName = order.assigned_to
+    ? order.assigned_to === currentAdminProfileId
+      ? "You"
+      : (order.assignee_email?.split("@")[0] ?? "Admin")
+    : null;
+
   return (
     <tr>
       <td colSpan={6} className="p-0">
@@ -139,9 +170,27 @@ function ExpandedRow({
             <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
               Line Items — {order.reference_number}
             </h3>
-            <span className="text-xs text-slate-400">
-              {order.items.length} item{order.items.length !== 1 ? "s" : ""}
-            </span>
+            <div className="flex items-center gap-3">
+              {/* Assignment badge / Assign to Me */}
+              {assigneeName ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
+                  Assigned: {assigneeName}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAssign}
+                  disabled={isAssigning}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {isAssigning ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  Assign to Me
+                </button>
+              )}
+              <span className="text-xs text-slate-400">
+                {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
 
           {/* Inner table */}
@@ -270,6 +319,8 @@ export default function OrderLedger({
   status,
   dateFrom,
   dateTo,
+  adminRole,
+  currentAdminProfileId,
 }: OrderLedgerProps) {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
@@ -309,6 +360,16 @@ export default function OrderLedger({
   const handleApproved = useCallback((orderId: string) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: "confirmed" } : o))
+    );
+  }, []);
+
+  const handleAssigned = useCallback((orderId: string, assignedTo: string, _email: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, assigned_to: assignedTo, assignee_email: "you" }
+          : o
+      )
     );
   }, []);
 
@@ -442,7 +503,9 @@ export default function OrderLedger({
                   {isExpanded && (
                     <ExpandedRow
                       order={order}
+                      currentAdminProfileId={currentAdminProfileId}
                       onApproved={handleApproved}
+                      onAssigned={handleAssigned}
                     />
                   )}
                 </React.Fragment>

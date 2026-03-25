@@ -75,6 +75,77 @@ async function resolveOrCreateCategoryId(
 }
 
 // ---------------------------------------------------------------------------
+// assignOrderAction
+// ---------------------------------------------------------------------------
+
+/**
+ * Assigns the current admin as the handler for an order.
+ * Only succeeds if the order is currently unassigned — immutable once set.
+ */
+export async function assignOrderAction(
+  formData: FormData
+): Promise<{ error: string } | void> {
+  const session = await requireAdmin();
+
+  const orderId = formData.get("orderId") as string | null;
+  if (!orderId) return { error: "Missing order ID." };
+
+  const { data, error } = await adminClient
+    .from("orders")
+    .update({ assigned_to: session.profileId })
+    .eq("id", orderId)
+    .is("assigned_to", null) // only assign if currently unassigned
+    .select("id");
+
+  if (error) {
+    console.error("[admin] assignOrder:", error.message);
+    return { error: "Failed to assign order. Please try again." };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "Order is already assigned to another employee." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// updateAdminRoleAction
+// ---------------------------------------------------------------------------
+
+/**
+ * Updates an admin user's sub-role (manager / employee).
+ * Restricted to the super admin via ADMIN_SUPER_EMAIL env var.
+ */
+export async function updateAdminRoleAction(
+  adminProfileId: string,
+  role: "manager" | "employee"
+): Promise<{ error: string } | void> {
+  await requireAdmin();
+
+  // Only the super admin may change roles
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const superEmail = process.env.ADMIN_SUPER_EMAIL;
+  if (!superEmail || user?.email !== superEmail) {
+    return { error: "Unauthorised: only the super admin can update admin roles." };
+  }
+
+  const { error } = await adminClient
+    .from("profiles")
+    .update({ admin_role: role })
+    .eq("id", adminProfileId)
+    .eq("role", "admin");
+
+  if (error) {
+    console.error("[admin] updateAdminRole:", error.message);
+    return { error: "Failed to update admin role. Please try again." };
+  }
+
+  revalidatePath("/admin/settings");
+}
+
+// ---------------------------------------------------------------------------
 // approveOrderAction
 // ---------------------------------------------------------------------------
 
@@ -133,13 +204,13 @@ export async function exportOrdersCsvAction(
   const dateTo = (formData.get("dateTo") as string | null) || null;
   const search = (formData.get("search") as string | null) || null;
 
-  // Build query — join profiles for business name
+  // Build query — disambiguate profiles join since orders now has two FKs to profiles
   let query = adminClient
     .from("orders")
     .select(
       `id, reference_number, created_at, status, payment_method,
        subtotal, vat_amount, total_amount,
-       profiles ( business_name, account_number, email ),
+       buyer:profiles!profile_id ( business_name, account_number, email ),
        order_items ( sku, product_name, quantity, unit_price, line_total )`
     )
     .order("created_at", { ascending: false });
@@ -180,7 +251,8 @@ export async function exportOrdersCsvAction(
   const rows: string[] = [header];
 
   for (const order of orders ?? []) {
-    const profile = order.profiles as RawProfile | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profile = (order as any).buyer as RawProfile | null;
     const items = (order.order_items as RawItem[]) ?? [];
     const bizName = profile?.business_name ?? "";
     const accNo = profile?.account_number ?? "";

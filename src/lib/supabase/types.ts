@@ -48,6 +48,8 @@ export interface Database {
           email_reply_to: string | null;
           support_phone: string | null;
           support_email: string | null;
+          dispatch_email: string | null;
+          report_emails: string | null;
           payment_terms_days: number;
           footer_text: string | null;
           updated_at: string;
@@ -72,6 +74,8 @@ export interface Database {
           email_reply_to?: string | null;
           support_phone?: string | null;
           support_email?: string | null;
+          dispatch_email?: string | null;
+          report_emails?: string | null;
           payment_terms_days?: number;
           footer_text?: string | null;
           updated_at?: string;
@@ -95,6 +99,8 @@ export interface Database {
           email_reply_to?: string | null;
           support_phone?: string | null;
           support_email?: string | null;
+          dispatch_email?: string | null;
+          report_emails?: string | null;
           payment_terms_days?: number;
           footer_text?: string | null;
           updated_at?: string;
@@ -111,6 +117,7 @@ export interface Database {
           auth_user_id: string | null;
           account_number: string | null;
           role: AppRole;
+          admin_role: "manager" | "employee" | null;
           business_name: string;
           trading_name: string | null;
           vat_number: string | null;
@@ -133,6 +140,7 @@ export interface Database {
           auth_user_id?: string | null;
           account_number?: string | null;
           role?: AppRole;
+          admin_role?: "manager" | "employee" | null;
           business_name: string;
           trading_name?: string | null;
           vat_number?: string | null;
@@ -155,6 +163,7 @@ export interface Database {
           auth_user_id?: string | null;
           account_number?: string | null;
           role?: AppRole;
+          admin_role?: "manager" | "employee" | null;
           business_name?: string;
           trading_name?: string | null;
           vat_number?: string | null;
@@ -283,6 +292,7 @@ export interface Database {
           description: string | null;
           details: string | null;
           price: number;
+          cost_price: number | null;
           category_id: string | null;
           track_stock: boolean;
           stock_qty: number;
@@ -303,6 +313,7 @@ export interface Database {
           description?: string | null;
           details?: string | null;
           price: number;
+          cost_price?: number | null;
           category_id?: string | null;
           track_stock?: boolean;
           stock_qty?: number;
@@ -323,6 +334,7 @@ export interface Database {
           description?: string | null;
           details?: string | null;
           price?: number;
+          cost_price?: number | null;
           category_id?: string | null;
           track_stock?: boolean;
           stock_qty?: number;
@@ -395,6 +407,7 @@ export interface Database {
           id: string;
           reference_number: string;
           profile_id: string;
+          assigned_to: string | null;
           status: OrderStatus;
           payment_method: PaymentMethod;
           subtotal: number;
@@ -417,6 +430,7 @@ export interface Database {
           id?: string;
           reference_number?: string;
           profile_id: string;
+          assigned_to?: string | null;
           status?: OrderStatus;
           payment_method: PaymentMethod;
           subtotal: number;
@@ -439,6 +453,7 @@ export interface Database {
           id?: string;
           reference_number?: string;
           profile_id?: string;
+          assigned_to?: string | null;
           status?: OrderStatus;
           payment_method?: PaymentMethod;
           subtotal?: number;
@@ -463,6 +478,13 @@ export interface Database {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           }
         ];
       };
@@ -478,6 +500,7 @@ export interface Database {
           sku: string;
           product_name: string;
           unit_price: number;
+          cost_price: number | null;
           quantity: number;
           discount_pct: number;
           line_total: number;
@@ -490,6 +513,7 @@ export interface Database {
           sku: string;
           product_name: string;
           unit_price: number;
+          cost_price?: number | null;
           quantity: number;
           discount_pct?: number;
           line_total: number;
@@ -502,6 +526,7 @@ export interface Database {
           sku?: string;
           product_name?: string;
           unit_price?: number;
+          cost_price?: number | null;
           quantity?: number;
           discount_pct?: number;
           line_total?: number;

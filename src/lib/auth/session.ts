@@ -12,6 +12,8 @@ export interface ActiveSession {
   accountNumber: string | null; // null for admins
   isBuyer: boolean;
   isAdmin: boolean;
+  /** Sub-role for admin users — null for buyers */
+  adminRole: "manager" | "employee" | null;
   /** Raw JWT for forwarding to a custom Supabase client if needed */
   token: string | null;
 }
@@ -40,6 +42,7 @@ export async function getSession(
         accountNumber: session.accountNumber,
         isBuyer: true,
         isAdmin: false,
+        adminRole: null,
         token: session.token,
       };
     }
@@ -57,7 +60,7 @@ export async function getSession(
     // RLS SELECT policies evaluate to false/null for admin accounts.
     const { data: profile } = await adminClient
       .from("profiles")
-      .select("id, role, account_number")
+      .select("id, role, account_number, admin_role")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -68,6 +71,7 @@ export async function getSession(
         accountNumber: profile.account_number,
         isBuyer: false,
         isAdmin: profile.role === "admin",
+        adminRole: profile.admin_role ?? "employee",
         token: null,
       };
     }
