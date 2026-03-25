@@ -2,8 +2,34 @@
  * Frontend-only grouping utilities for the Buyer Catalogue.
  * No database, Zod schema, or Cart store changes required.
  *
- * extractBaseAndVariation() applies four rules in priority order to handle
- * the inconsistently-formatted real-world product names in the catalogue.
+ * Naming convention across all 142 SKUs:
+ *   Products that share a base spec but differ only by length/orientation/size
+ *   are named  "Base Name (Variant)" — e.g. "Carport Pole Round 76x1.2mm (3.0m)"
+ *
+ * The only exception: L-Plates use single-letter dimension labels in parentheses
+ *   e.g. "L-Plate 50(h) x 50(w) x 20(l)" — (h), (w), (l) are NOT grouping variants.
+ *
+ * Algorithm — extractBaseAndVariation():
+ *   1. Find the last "(" and its closing ")".
+ *   2. If the content is a single letter  (h / w / l / d) → standalone product.
+ *   3. Otherwise:
+ *      baseName  = text BEFORE the "(" + any text AFTER the ")" (e.g. thickness suffix)
+ *      variation = text INSIDE the parentheses
+ *   4. No parentheses at all → standalone product (variation = "Standard").
+ *
+ * This correctly handles every product in the catalogue:
+ *   "Carport Pole Round 76x1.2mm (3.0m)"    → base "Carport Pole Round 76x1.2mm"  var "3.0m"
+ *   "Galv. Bracing Strap 25mm (30m)"        → base "Galv. Bracing Strap 25mm"     var "30m"
+ *   "AR Palisade Spike 30x30x2mm (400mm)"   → base "AR Palisade Spike 30x30x2mm"  var "400mm"
+ *   "Hurricane Clip (Left)"                  → base "Hurricane Clip"               var "Left"
+ *   "Gate Wheel in Casing 80mm (V-Groove)"  → base "Gate Wheel in Casing 80mm"    var "V-Groove"
+ *   "Galv. Flashing Sidewall 230x75mm (2.4m) 0.4mm"
+ *                                            → base "Galv. Flashing Sidewall 230x75mm 0.4mm"
+ *                                              var "2.4m"   (thickness stays in base name
+ *                                                            so 0.3mm ≠ 0.4mm — no false grouping)
+ *   "L-Plate 50(h) x 50(w) x 20(l)"        → standalone  (single-letter guard)
+ *   "Galv. Truss Hanger 38mm"               → standalone  (no parens)
+ *   "Gate Catch 32mm"                        → standalone  (no parens)
  */
 
 // ---------------------------------------------------------------------------
@@ -36,105 +62,51 @@ export interface ProductGroup {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 1 — Known prefix table
-// Sorted longest-first so a longer, more-specific prefix always wins over
-// a shorter prefix that happens to be a substring (e.g. "Galv. Bracing Strap
-// 25mm" must not be claimed by a hypothetical shorter "Galv." rule first).
-// ---------------------------------------------------------------------------
-
-const KNOWN_PREFIXES: readonly string[] = [
-  "AR Palisade Spike 30x30x2mm",
-  "Argo StrikeMax Welding Rods",
-  "Galv. Bracing Strap 25mm",
-  "Galv. Hoop Iron 32mm",
-  "Razor Wire Comb 2mm",
-  "Gate Wheel in Casing",
-  "Truss Nail Plate",
-  "Argo Cutting Disk",
-  "Gate Wheel Loose",
-  "Argo Wheel Kit",
-  "L-Plate",
-].sort((a, b) => b.length - a.length);
-
-/**
- * Cleans artefacts from variation strings produced by Rule 1.
- * Removes stray closing parentheses and isolated "l" characters that appear
- * in some L-Plate product names (e.g. "150x150x5mm l)" → "150x150x5mm").
- */
-function cleanVariation(raw: string): string {
-  return raw
-    .replace(/\)/g, "")        // remove stray ")"
-    .replace(/\bl\b/gi, "")    // remove isolated "l" / "L" characters
-    .replace(/\s+/g, " ")      // collapse whitespace
-    .trim();
-}
-
-// ---------------------------------------------------------------------------
-// Trailing-length regex — Rule 3
-// Matches a standalone length token at the end of a name, e.g.:
-//   "Carport Pole Round 76x1.2mm 3.0m"  →  base "Carport Pole Round 76x1.2mm", variation "3.0m"
-//   "Square Tube 25x25x1.6mm 6.0m"      →  base "Square Tube 25x25x1.6mm",     variation "6.0m"
-// Greedy first group backtracks correctly past embedded specs like "76x1.2mm"
-// because the anchored length token must reach end-of-string ($).
-// ---------------------------------------------------------------------------
-
-const TRAILING_LENGTH_RE = /^(.+)\s+(\d+(?:\.\d+)?m)$/;
-
-// ---------------------------------------------------------------------------
-// Main heuristic parser
+// Core parser
 // ---------------------------------------------------------------------------
 
 export function extractBaseAndVariation(name: string): {
   baseName: string;
   variation: string;
 } {
-  // ── Rule 1: Known-prefix categories ────────────────────────────────────────
-  for (const prefix of KNOWN_PREFIXES) {
-    if (name.startsWith(prefix)) {
-      const remainder = name.slice(prefix.length);
-      const variation = cleanVariation(remainder);
-      return {
-        baseName: prefix,
-        variation: variation || "Standard",
-      };
-    }
+  const lastOpen = name.lastIndexOf("(");
+  if (lastOpen === -1) {
+    // No parentheses — standalone product
+    return { baseName: name.trim(), variation: "Standard" };
   }
 
-  // ── Rule 2: Electro-Galv / Galv. finish prefix pairs ───────────────────────
-  // "Electro-Galv. Gate Catch 32mm"  → base "Gate Catch 32mm",  variation "Electro-Galv."
-  // "Galv. Lock Box 150mm"           → base "Lock Box 150mm",   variation "Galv."
-  // The plain counterpart ("Gate Catch 32mm") falls through to Rule 4 and gets
-  // variation "Standard", so the two products group together automatically.
-  if (name.startsWith("Electro-Galv. ")) {
-    return {
-      baseName: name.slice("Electro-Galv. ".length).trim(),
-      variation: "Electro-Galv.",
-    };
-  }
-  if (name.startsWith("Galv. ")) {
-    return {
-      baseName: name.slice("Galv. ".length).trim(),
-      variation: "Galv.",
-    };
+  const lastClose = name.indexOf(")", lastOpen);
+  if (lastClose === -1) {
+    // Unmatched "(" — treat as standalone to be safe
+    return { baseName: name.trim(), variation: "Standard" };
   }
 
-  // ── Rule 3: Trailing length token (poles, tubes, sections) ─────────────────
-  const lengthMatch = TRAILING_LENGTH_RE.exec(name);
-  if (lengthMatch) {
-    return {
-      baseName: lengthMatch[1].trim(),
-      variation: lengthMatch[2],
-    };
+  const content = name.slice(lastOpen + 1, lastClose).trim();
+
+  // Guard: L-Plate dimension labels are single letters (h, w, l, d).
+  // They are part of the product's own dimension notation, not grouping variants.
+  if (/^[a-zA-Z]$/.test(content)) {
+    return { baseName: name.trim(), variation: "Standard" };
   }
 
-  // ── Rule 4: Standalone product — no grouping applies ───────────────────────
-  return { baseName: name.trim(), variation: "Standard" };
+  const before = name.slice(0, lastOpen).trim();
+  // Text after the closing ")" — e.g. "0.4mm" thickness in flashing names.
+  // Fold it back into the base name so products with different suffixes do
+  // NOT get incorrectly grouped together.
+  const after = name.slice(lastClose + 1).trim();
+
+  const baseName = after ? `${before} ${after}` : before;
+
+  return {
+    baseName: baseName || name.trim(),
+    variation: content || "Standard",
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Grouping function
-// Groups a flat product list by baseName, preserving order of first appearance
-// so the catalogue order matches the admin-defined SKU order.
+// Groups a flat product list by baseName, preserving the order of first
+// appearance so the catalogue follows the admin-defined SKU sort order.
 // ---------------------------------------------------------------------------
 
 export function groupProductsByName(products: ProductRowData[]): ProductGroup[] {
