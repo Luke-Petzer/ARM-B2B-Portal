@@ -158,7 +158,7 @@ async function sendDispatchEmail(orderId: string): Promise<void> {
     // 1. Fetch order
     const { data: order } = await adminClient
       .from("orders")
-      .select("id, reference_number, created_at, order_notes, profile_id")
+      .select("id, reference_number, created_at, order_notes, delivery_instructions, profile_id")
       .eq("id", orderId)
       .single();
 
@@ -198,6 +198,11 @@ async function sendDispatchEmail(orderId: string): Promise<void> {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dispatchEmail)) {
+      console.warn("[dispatch] dispatch_email is not a valid email address:", dispatchEmail);
+      return;
+    }
+
     const resendKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL;
     if (!resendKey || !fromEmail) {
@@ -223,6 +228,7 @@ async function sendDispatchEmail(orderId: string): Promise<void> {
         business_name: profile.business_name,
         contact_name: profile.contact_name ?? "",
       },
+      deliveryAddress: order.delivery_instructions ?? null,
     });
 
     // 6. Send email
@@ -328,6 +334,8 @@ export async function approveOrderAction(
     console.error("[admin] approveOrder:", error.message);
     return { error: "Failed to approve order. Please try again." };
   }
+
+  revalidatePath("/admin");
 
   if (isFirstApproval) {
     sendDispatchEmail(orderId).catch((err: unknown) =>
