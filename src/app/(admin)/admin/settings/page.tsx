@@ -19,11 +19,13 @@ export default async function AdminSettingsPage() {
     redirect("/admin" as Route);
   }
 
-  const { data: config } = await adminClient
-    .from("tenant_config")
-    .select("*")
-    .eq("id", 1)
-    .single();
+  const [{ data: config }, { data: adminUsers }] = await Promise.all([
+    adminClient.from("tenant_config").select("*").eq("id", 1).single(),
+    adminClient
+      .from("profiles")
+      .select("id, contact_name, email, admin_role")
+      .eq("role", "admin"),
+  ]);
 
   if (!config) {
     return (
@@ -47,7 +49,12 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
-      <SettingsForm config={config} />
+      <SettingsForm
+        config={config}
+        isSuperAdmin
+        adminUsers={adminUsers ?? []}
+        superAdminEmail={user?.email ?? null}
+      />
     </div>
   );
 }

@@ -2,13 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
-import { updateTenantConfigAction } from "@/app/actions/admin";
+import { updateTenantConfigAction, updateAdminRoleAction } from "@/app/actions/admin";
 import type { Database } from "@/lib/supabase/types";
 
 type TenantConfig = Database["public"]["Tables"]["tenant_config"]["Row"];
 
+interface AdminUser {
+  id: string;
+  contact_name: string;
+  email: string | null;
+  admin_role: "manager" | "employee" | null;
+}
+
 interface SettingsFormProps {
   config: TenantConfig;
+  isSuperAdmin?: boolean;
+  adminUsers?: AdminUser[];
+  superAdminEmail?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,10 +91,86 @@ function SectionCard({
 }
 
 // ---------------------------------------------------------------------------
+// AdminRoleRow — renders a single admin user row with role toggle
+// ---------------------------------------------------------------------------
+
+function AdminRoleRow({
+  user,
+  isSelf,
+}: {
+  user: AdminUser;
+  isSelf: boolean;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [currentRole, setCurrentRole] = useState<"manager" | "employee" | null>(
+    user.admin_role
+  );
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  const handleRoleChange = (role: "manager" | "employee") => {
+    if (isSelf || role === currentRole) return;
+    setRowError(null);
+    startTransition(async () => {
+      const result = await updateAdminRoleAction(user.id, role);
+      if (result && "error" in result) {
+        setRowError(result.error);
+      } else {
+        setCurrentRole(role);
+      }
+    });
+  };
+
+  return (
+    <tr className="border-b border-slate-100 last:border-0">
+      <td className="py-3 px-4">
+        <p className="text-sm font-medium text-slate-900">{user.contact_name}</p>
+        <p className="text-xs text-slate-400">{user.email ?? "—"}</p>
+      </td>
+      <td className="py-3 px-4">
+        {rowError ? (
+          <p className="text-xs text-red-500">{rowError}</p>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 capitalize">
+            {currentRole ?? "unset"}
+          </span>
+        )}
+      </td>
+      <td className="py-3 px-4 text-right">
+        {isSelf ? (
+          <span className="text-xs text-slate-400 italic">You</span>
+        ) : (
+          <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
+            {(["manager", "employee"] as const).map((role) => (
+              <button
+                key={role}
+                type="button"
+                disabled={isPending || currentRole === role}
+                onClick={() => handleRoleChange(role)}
+                className={`h-8 px-3 text-xs font-medium transition-colors capitalize ${
+                  currentRole === role
+                    ? "bg-slate-900 text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                } disabled:pointer-events-none`}
+              >
+                {isPending && currentRole !== role ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  role
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function SettingsForm({ config }: SettingsFormProps) {
+export default function SettingsForm({ config, isSuperAdmin, adminUsers, superAdminEmail }: SettingsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -260,6 +346,43 @@ export default function SettingsForm({ config }: SettingsFormProps) {
           </p>
         </div>
       </SectionCard>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Card 4 — Admin Users (super admin only)                             */}
+      {/* ------------------------------------------------------------------ */}
+      {isSuperAdmin && adminUsers && adminUsers.length > 0 && (
+        <SectionCard
+          title="Admin Users"
+          description="Manage the sub-roles of other admin accounts. You cannot change your own role."
+        >
+          <div className="overflow-x-auto -mx-6 -mb-6">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Name / Email
+                  </th>
+                  <th className="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Current Role
+                  </th>
+                  <th className="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminUsers.map((u) => (
+                  <AdminRoleRow
+                    key={u.id}
+                    user={u}
+                    isSelf={!!superAdminEmail && u.email === superAdminEmail}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Sticky footer                                                        */}
