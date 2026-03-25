@@ -5,6 +5,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { Resend } from "resend";
+import ClientStatement from "@/emails/ClientStatement";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 
@@ -419,6 +421,8 @@ export async function createProductAction(
   const discountValue = formData.get("discount_value")
     ? parseFloat(formData.get("discount_value") as string)
     : null;
+  const costPrice = parseFloat(formData.get("cost_price") as string) || null;
+  const packSize = parseInt(formData.get("pack_size") as string, 10) || 1;
 
   if (discountType && (!discountThreshold || discountValue === null)) {
     return { error: "Bulk discount requires a minimum quantity and discount value." };
@@ -450,6 +454,8 @@ export async function createProductAction(
       discount_type: discountType,
       discount_threshold: discountThreshold,
       discount_value: discountValue,
+      cost_price: costPrice,
+      pack_size: packSize,
     })
     .select("id")
     .single();
@@ -510,6 +516,8 @@ export async function updateProductAction(
   const discountValue = formData.get("discount_value")
     ? parseFloat(formData.get("discount_value") as string)
     : null;
+  const costPrice = parseFloat(formData.get("cost_price") as string) || null;
+  const packSize = parseInt(formData.get("pack_size") as string, 10) || 1;
 
   if (discountType && (!discountThreshold || discountValue === null)) {
     return { error: "Bulk discount requires a minimum quantity and discount value." };
@@ -548,6 +556,8 @@ export async function updateProductAction(
     discount_type: discountType,
     discount_threshold: discountThreshold,
     discount_value: discountValue,
+    cost_price: costPrice,
+    pack_size: packSize,
   };
 
   const { error } = await adminClient
@@ -913,6 +923,106 @@ export async function bulkMarkOrdersSettledAction(
   if (error) return { error: error.message };
 
   revalidatePath("/admin/clients");
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// sendClientStatementAction — email outstanding orders to a 30-day client
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all unpaid + credit_approved confirmed orders for the given profile
+ * and sends a statement email via Resend.
+ */
+export async function sendClientStatementAction(
+  profileId: string
+): Promise<{ error?: string; success?: boolean }> {
+  await requireAdmin();
+
+  // 1. Fetch profile
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("id, business_name, contact_name, email, account_number")
+    .eq("id", profileId)
+    .single();
+
+  if (!profile) return { error: "Client not found." };
+  if (!profile.email) return { error: "Client has no email address on file." };
+
+  // 2. Fetch outstanding orders with their items
+  const { data: orders } = await adminClient
+    .from("orders")
+    .select(
+      `id, reference_number, created_at, confirmed_at, total_amount,
+       order_items ( product_name, quantity, unit_price, line_total )`
+    )
+    .eq("profile_id", profileId)
+    .in("payment_status", ["unpaid", "credit_approved"])
+    .not("confirmed_at", "is", null)
+    .order("confirmed_at", { ascending: true });
+
+  // 3. Fetch tenant config for branding + from address
+  const { data: config } = await adminClient
+    .from("tenant_config")
+    .select("business_name, support_email, email_from_name")
+    .eq("id", 1)
+    .single();
+
+  const resendKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+
+  if (!resendKey || !fromEmail) {
+    return { error: "Email service not configured." };
+  }
+
+  const resend = new Resend(resendKey);
+  const supplierName = config?.business_name ?? "Your Supplier";
+  const fromAddress = config?.email_from_name
+    ? `${config.email_from_name} <${fromEmail}>`
+    : fromEmail;
+
+  const totalOutstanding = (orders ?? []).reduce(
+    (sum, o) => sum + Number(o.total_amount),
+    0
+  );
+  const ZAR = new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    minimumFractionDigits: 2,
+  });
+
+  const { error } = await resend.emails.send({
+    from: fromAddress,
+    to: [profile.email],
+    subject: `Account Statement — ${profile.business_name}`,
+    react: ClientStatement({
+      businessName: profile.business_name,
+      contactName: profile.contact_name,
+      accountNumber: profile.account_number,
+      orders: (orders ?? []).map((o) => ({
+        referenceNumber: o.reference_number,
+        confirmedAt: o.confirmed_at!,
+        totalAmount: Number(o.total_amount),
+        totalFormatted: ZAR.format(Number(o.total_amount)),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items: (o.order_items as any[]).map((i) => ({
+          productName: i.product_name,
+          quantity: i.quantity,
+          unitPrice: Number(i.unit_price),
+          lineTotal: Number(i.line_total),
+        })),
+      })),
+      totalOutstanding: ZAR.format(totalOutstanding),
+      supplierName,
+      supportEmail: config?.support_email ?? null,
+    }),
+  });
+
+  if (error) {
+    console.error("[admin] sendClientStatement:", error.message);
+    return { error: "Failed to send statement email." };
+  }
+
   return { success: true };
 }
 

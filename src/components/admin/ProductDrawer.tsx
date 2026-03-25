@@ -34,6 +34,9 @@ export interface ProductForDrawer {
   stock_qty: number;
   is_active: boolean;
   primaryImageUrl: string | null;
+  // Pricing fields
+  cost_price: number | null;
+  pack_size: number;
   // Discount fields
   discount_type: "percentage" | "fixed" | null;
   discount_threshold: number | null;
@@ -291,6 +294,53 @@ export default function ProductDrawer({
                     className="w-full h-10 pl-7 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Cost Price + Pack Size */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <FieldLabel>Cost Price (R)</FieldLabel>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                    R
+                  </span>
+                  <input
+                    type="number"
+                    name="cost_price"
+                    min={0}
+                    step="0.01"
+                    defaultValue={product?.cost_price ?? ""}
+                    placeholder="0.00"
+                    onKeyDown={(e) => {
+                      if (["e", "E", "+", "-"].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="w-full h-10 pl-7 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Pack Size</FieldLabel>
+                <input
+                  type="number"
+                  name="pack_size"
+                  required
+                  min={1}
+                  step={1}
+                  defaultValue={product?.pack_size ?? 1}
+                  placeholder="1"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-", "."].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Number of units per sellable pack. Unit price = Selling Price ÷ Pack Size.
+                </p>
               </div>
             </div>
 

@@ -10,6 +10,7 @@ export default async function AdminProductsPage() {
         `id, sku, name, description, details, price,
          category_id, track_stock, stock_qty, is_active,
          discount_type, discount_threshold, discount_value,
+         cost_price, pack_size,
          product_images ( url, is_primary, display_order )`
       )
       .order("sku", { ascending: true }),
@@ -42,6 +43,8 @@ export default async function AdminProductsPage() {
       discount_type: p.discount_type as "percentage" | "fixed" | null,
       discount_threshold: p.discount_threshold !== null ? Number(p.discount_threshold) : null,
       discount_value: p.discount_value !== null ? Number(p.discount_value) : null,
+      cost_price: p.cost_price !== null ? Number(p.cost_price) : null,
+      pack_size: p.pack_size ?? 1,
       categoryName:
         (categories ?? []).find((c) => c.id === p.category_id)?.name ?? null,
     };
