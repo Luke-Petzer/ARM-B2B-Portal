@@ -479,7 +479,7 @@ export default function ProductDrawer({
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex-[2] h-11 px-4 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
+                className="flex-[2] h-11 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
               >
                 {isPending ? (
                   <>

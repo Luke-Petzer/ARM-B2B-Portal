@@ -108,7 +108,7 @@ export default function ClientsTable({
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="h-10 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm w-full md:w-auto"
+            className="h-10 px-5 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-sm w-full md:w-auto"
           >
             <Plus className="w-4 h-4" />
             Add Client

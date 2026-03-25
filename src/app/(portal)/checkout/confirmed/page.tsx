@@ -185,7 +185,7 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
           <a
             href={`/api/invoice/${order.id}`}
             download={`Proforma-${order.reference_number}.pdf`}
-            className="w-full h-12 flex items-center justify-center gap-2 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 active:scale-[0.98] transition-all mb-6"
+            className="w-full h-12 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary/90 active:scale-[0.98] transition-all mb-6"
           >
             <Download className="w-5 h-5" />
             Download Proforma Invoice PDF

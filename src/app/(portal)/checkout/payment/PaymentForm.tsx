@@ -64,7 +64,7 @@ export default function PaymentForm({ orderId }: PaymentFormProps) {
         type="button"
         onClick={handleSubmit}
         disabled={isPending}
-        className="w-full h-12 flex items-center justify-center gap-2 bg-slate-900 text-white rounded font-semibold text-sm hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+        className="w-full h-12 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded font-semibold text-sm hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
       >
         {isPending ? (
           <>

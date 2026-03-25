@@ -185,7 +185,7 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                   className={[
                     "text-[12px] font-bold px-4 py-2 rounded transition-colors disabled:opacity-60 disabled:cursor-not-allowed",
                     isExpanded
-                      ? "bg-slate-900 text-white hover:bg-slate-800"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200",
                   ].join(" ")}
                 >
@@ -235,7 +235,7 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                   className={[
                     "text-[12px] font-bold px-4 py-2 rounded transition-colors disabled:opacity-60 disabled:cursor-not-allowed",
                     isExpanded
-                      ? "bg-slate-900 text-white hover:bg-slate-800"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200",
                   ].join(" ")}
                 >

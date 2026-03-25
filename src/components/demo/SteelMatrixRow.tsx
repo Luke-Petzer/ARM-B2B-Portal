@@ -201,7 +201,7 @@ export default function SteelMatrixRow() {
             <button
               type="button"
               onClick={handleAddToCart}
-              className="h-8 px-3 bg-slate-900 hover:bg-slate-700 active:scale-[0.97] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all duration-150 whitespace-nowrap"
+              className="h-8 px-3 bg-primary hover:bg-primary/90 active:scale-[0.97] text-primary-foreground text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all duration-150 whitespace-nowrap"
             >
               <ShoppingCart className="w-3.5 h-3.5" />
               Add

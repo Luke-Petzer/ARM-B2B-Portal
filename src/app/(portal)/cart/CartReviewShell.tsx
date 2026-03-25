@@ -262,7 +262,7 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
               type="button"
               onClick={handleCheckout}
               disabled={items.length === 0 || isPending}
-              className="flex items-center justify-center gap-2 w-full h-12 bg-slate-900 text-white rounded font-semibold text-sm hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+              className="flex items-center justify-center gap-2 w-full h-12 bg-primary text-primary-foreground rounded font-semibold text-sm hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
             >
               {isPending ? (
                 <>

@@ -240,7 +240,7 @@ function ExpandedRow({
                 type="button"
                 onClick={handleMark}
                 disabled={isProcessed || isPending}
-                className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+                className="h-9 px-5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
               >
                 {isPending ? (
                   <>
@@ -370,7 +370,7 @@ export default function OrderLedger({
           type="button"
           onClick={handleExportCsv}
           disabled={isExporting}
-          className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+          className="h-9 px-5 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none"
         >
           {isExporting ? (
             <>
@@ -487,7 +487,7 @@ export default function OrderLedger({
                 href={buildPageUrl(p)}
                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
                   p === page
-                    ? "bg-slate-900 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -504,7 +504,7 @@ export default function OrderLedger({
                 href={buildPageUrl(totalPages)}
                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
                   totalPages === page
-                    ? "bg-slate-900 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >

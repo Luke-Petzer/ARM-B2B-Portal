@@ -147,7 +147,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
                   <button
                     key={group.slug}
                     onClick={() => scrollToCategory(group.slug)}
-                    className="flex-shrink-0 px-4 py-1.5 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors"
+                    className="flex-shrink-0 px-4 py-1.5 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
                   >
                     {group.name}
                   </button>

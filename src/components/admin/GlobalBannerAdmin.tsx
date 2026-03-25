@@ -118,7 +118,7 @@ export default function GlobalBannerAdmin({
         <button
           type="submit"
           disabled={isPending}
-          className="h-11 px-6 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2"
+          className="h-11 px-6 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2"
         >
           {isPending ? (
             <>

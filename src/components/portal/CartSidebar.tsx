@@ -114,7 +114,7 @@ export default function CartSidebar() {
             "w-full flex items-center justify-center h-12 rounded font-semibold text-sm transition-all",
             items.length === 0
               ? "bg-gray-100 text-gray-400 pointer-events-none"
-              : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]",
+              : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]",
           ].join(" ")}
           aria-disabled={items.length === 0}
           tabIndex={items.length === 0 ? -1 : 0}

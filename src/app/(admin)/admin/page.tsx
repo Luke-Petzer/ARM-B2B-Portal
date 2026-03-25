@@ -250,7 +250,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
 
           <button
             type="submit"
-            className="h-9 px-4 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+            className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             Apply
           </button>

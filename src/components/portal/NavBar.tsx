@@ -69,8 +69,8 @@ export default function NavBar() {
                   className={[
                     "text-sm font-medium transition-colors border-b-2 pb-0.5",
                     isActive
-                      ? "text-gray-900 border-gray-900"
-                      : "text-gray-700 border-transparent hover:border-gray-300",
+                      ? "text-primary border-primary"
+                      : "text-gray-700 border-transparent hover:text-primary hover:border-primary",
                   ].join(" ")}
                 >
                   {label}
@@ -139,8 +139,8 @@ export default function NavBar() {
                   className={[
                     "text-sm font-medium py-2 transition-colors border-b-2",
                     isActive
-                      ? "text-gray-900 border-gray-900"
-                      : "text-gray-700 border-transparent hover:border-gray-300",
+                      ? "text-primary border-primary"
+                      : "text-gray-700 border-transparent hover:text-primary hover:border-primary",
                   ].join(" ")}
                 >
                   {label}

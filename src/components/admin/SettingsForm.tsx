@@ -267,7 +267,7 @@ export default function SettingsForm({ config }: SettingsFormProps) {
           <button
             type="submit"
             disabled={isPending}
-            className="h-10 px-5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2"
+            className="h-10 px-5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2"
           >
             {isPending ? (
               <>
