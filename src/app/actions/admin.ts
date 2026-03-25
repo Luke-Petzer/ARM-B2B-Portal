@@ -421,8 +421,15 @@ export async function createProductAction(
   const discountValue = formData.get("discount_value")
     ? parseFloat(formData.get("discount_value") as string)
     : null;
-  const costPrice = parseFloat(formData.get("cost_price") as string) || null;
-  const packSize = parseInt(formData.get("pack_size") as string, 10) || 1;
+  const costPriceRaw = formData.get("cost_price") as string | null;
+  const costPrice =
+    costPriceRaw && costPriceRaw.trim() !== ""
+      ? parseFloat(costPriceRaw)
+      : null;
+  const packSize = parseInt(formData.get("pack_size") as string, 10);
+  if (!packSize || packSize < 1) {
+    return { error: "Pack size must be a whole number of 1 or greater." };
+  }
 
   if (discountType && (!discountThreshold || discountValue === null)) {
     return { error: "Bulk discount requires a minimum quantity and discount value." };
@@ -516,8 +523,15 @@ export async function updateProductAction(
   const discountValue = formData.get("discount_value")
     ? parseFloat(formData.get("discount_value") as string)
     : null;
-  const costPrice = parseFloat(formData.get("cost_price") as string) || null;
-  const packSize = parseInt(formData.get("pack_size") as string, 10) || 1;
+  const costPriceRaw = formData.get("cost_price") as string | null;
+  const costPrice =
+    costPriceRaw && costPriceRaw.trim() !== ""
+      ? parseFloat(costPriceRaw)
+      : null;
+  const packSize = parseInt(formData.get("pack_size") as string, 10);
+  if (!packSize || packSize < 1) {
+    return { error: "Pack size must be a whole number of 1 or greater." };
+  }
 
   if (discountType && (!discountThreshold || discountValue === null)) {
     return { error: "Bulk discount requires a minimum quantity and discount value." };
