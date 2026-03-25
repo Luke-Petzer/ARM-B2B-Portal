@@ -9,7 +9,18 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import { markProcessedAction, approveOrderAction, exportOrdersCsvAction } from "@/app/actions/admin";
+import { approveOrderAction, exportOrdersCsvAction } from "@/app/actions/admin";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 // ---------------------------------------------------------------------------
@@ -97,31 +108,13 @@ function StatusBadge({ status }: { status: string }) {
 
 function ExpandedRow({
   order,
-  onMarked,
   onApproved,
 }: {
   order: OrderRow;
-  onMarked: (id: string) => void;
   onApproved: (id: string) => void;
 }) {
-  const [isPending, startTransition] = useTransition();
   const [isApproving, startApprove] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const isProcessed = order.status === "fulfilled";
-
-  const handleMark = () => {
-    setError(null);
-    startTransition(async () => {
-      const fd = new FormData();
-      fd.set("orderId", order.id);
-      const result = await markProcessedAction(fd);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        onMarked(order.id);
-      }
-    });
-  };
 
   const handleApprove = () => {
     setError(null);
@@ -222,38 +215,40 @@ function ExpandedRow({
               )}
               {/* Approve Order — visible for pending orders only */}
               {order.status === "pending" && (
-                <button
-                  type="button"
-                  onClick={handleApprove}
-                  disabled={isApproving}
-                  className="h-9 px-4 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  {isApproving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4" />
-                  )}
-                  Approve Order
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isApproving}
+                      className="h-9 px-4 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {isApproving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4" />
+                      )}
+                      Approve Order
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Order Approval</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will mark the order as paid and notify dispatch. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleApprove}
+                        className="bg-sky-600 hover:bg-sky-700 text-white"
+                      >
+                        Confirm Approval
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
-              <button
-                type="button"
-                onClick={handleMark}
-                disabled={isProcessed || isPending}
-                className="h-9 px-5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Updating…
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    {isProcessed ? "Marked Processed" : "Mark Processed in POS"}
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -310,12 +305,6 @@ export default function OrderLedger({
   }, [router]);
 
   const totalPages = Math.ceil(liveCount / pageSize);
-
-  const handleMarked = useCallback((orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: "fulfilled" } : o))
-    );
-  }, []);
 
   const handleApproved = useCallback((orderId: string) => {
     setOrders((prev) =>
@@ -453,7 +442,6 @@ export default function OrderLedger({
                   {isExpanded && (
                     <ExpandedRow
                       order={order}
-                      onMarked={handleMarked}
                       onApproved={handleApproved}
                     />
                   )}

@@ -75,33 +75,6 @@ async function resolveOrCreateCategoryId(
 }
 
 // ---------------------------------------------------------------------------
-// markProcessedAction
-// ---------------------------------------------------------------------------
-
-/**
- * Marks an order as fulfilled ("processed in POS").
- * Called from the Order Ledger expanded row.
- */
-export async function markProcessedAction(
-  formData: FormData
-): Promise<{ error: string } | void> {
-  await requireAdmin();
-
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
-
-  const { error } = await adminClient
-    .from("orders")
-    .update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
-    .eq("id", orderId);
-
-  if (error) {
-    console.error("[admin] markProcessed:", error.message);
-    return { error: "Failed to update order. Please try again." };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // approveOrderAction
 // ---------------------------------------------------------------------------
 
