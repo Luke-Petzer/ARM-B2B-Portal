@@ -8,6 +8,8 @@ import OrderLedger from "@/components/admin/OrderLedger";
 import type { OrderRow } from "@/components/admin/OrderLedger";
 import type { Database } from "@/lib/supabase/types";
 import type { Route } from "next";
+import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
+import type { CreditStatus } from "@/lib/credit/checkCreditStatus";
 
 const PAGE_SIZE = 20;
 
@@ -118,7 +120,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   let ordersQuery = adminClient
     .from("orders")
     .select(
-      `id, reference_number, created_at, status, payment_method, payment_status, assigned_to,
+      `id, profile_id, reference_number, created_at, status, payment_method, payment_status, assigned_to,
        subtotal, vat_amount, total_amount, order_notes,
        buyer:profiles!profile_id ( business_name, account_number ),
        assignee:profiles!assigned_to ( email ),
@@ -158,6 +160,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
     const assignee = raw.assignee as RawAssignee;
     return {
       id: o.id,
+      profile_id: (o as { profile_id?: string }).profile_id ?? "",
       reference_number: o.reference_number,
       created_at: o.created_at,
       status: o.status,
@@ -180,6 +183,29 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
       })),
     };
   });
+
+  // ── Credit status checks for 30-day pending orders ─────────────────────
+  // Collect unique profile IDs for 30-day accounts with pending orders
+  const thirtyDayPendingProfileIds = [
+    ...new Set(
+      orders
+        .filter(
+          (o) => o.payment_method === "30_day_account" && o.status === "pending"
+        )
+        .map((o) => o.profile_id)
+        .filter(Boolean)
+    ),
+  ];
+
+  const creditStatusEntries = await Promise.all(
+    thirtyDayPendingProfileIds.map(async (profileId) => {
+      const status = await checkCreditStatus(profileId);
+      return [profileId, status] as [string, CreditStatus];
+    })
+  );
+
+  const creditStatusByProfileId: Record<string, CreditStatus> =
+    Object.fromEntries(creditStatusEntries);
 
   return (
     <div>
@@ -304,6 +330,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         dateTo={dateTo ?? ""}
         adminRole={adminRole}
         currentAdminProfileId={currentAdminProfileId}
+        creditStatusByProfileId={creditStatusByProfileId}
       />
     </div>
   );
