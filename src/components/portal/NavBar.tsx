@@ -72,7 +72,10 @@ export default function NavBar({ role }: NavBarProps) {
           {/* Desktop nav links — hidden on mobile */}
           <div className="hidden md:flex items-center gap-8 ml-4">
             {NAV_LINKS.map(({ href, label }) => {
-              const isActive = pathname === href || pathname.startsWith(href + "/");
+              const isActive =
+                href === "/dashboard"
+                  ? pathname === href
+                  : pathname === href || pathname.startsWith(href + "/");
               return (
                 <Link
                   key={href}
@@ -141,7 +144,10 @@ export default function NavBar({ role }: NavBarProps) {
         <div className="md:hidden bg-white border-b border-gray-100 shadow-sm z-40">
           <div className="flex flex-col px-8 py-4 gap-4">
             {NAV_LINKS.map(({ href, label }) => {
-              const isActive = pathname === href || pathname.startsWith(href + "/");
+              const isActive =
+                href === "/dashboard"
+                  ? pathname === href
+                  : pathname === href || pathname.startsWith(href + "/");
               return (
                 <Link
                   key={href}
