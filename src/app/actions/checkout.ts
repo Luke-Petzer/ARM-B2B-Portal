@@ -193,7 +193,7 @@ export async function checkoutAction(
   const productIds = items.map((i) => i.productId);
   const { data: productRows, error: productFetchError } = await adminClient
     .from("products")
-    .select("id, cost_price, discount_type, discount_threshold, discount_value")
+    .select("id, cost_price, pack_size, discount_type, discount_threshold, discount_value")
     .in("id", productIds);
 
   if (productFetchError || !productRows) {
@@ -286,6 +286,7 @@ export async function checkoutAction(
       product_name: item.name,
       unit_price: item.unitPrice,
       cost_price: dbProduct?.cost_price ?? null, // snapshot at order time for daily report
+      pack_size: dbProduct?.pack_size ?? 1,
       quantity: item.quantity,
       discount_pct: discountPct,
       line_total: lineTotals[idx],
