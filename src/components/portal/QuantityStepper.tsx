@@ -76,6 +76,12 @@ export default function QuantityStepper({
         onFocus={handleFocus}
         onChange={handleChange}
         onBlur={handleBlur}
+        onKeyDown={(e) => {
+          // Block non-integer characters that browsers allow in type="number"
+          if (["e", "E", "+", "-", "."].includes(e.key)) {
+            e.preventDefault();
+          }
+        }}
         className="w-16 text-center text-[13px] font-medium border-x border-gray-100 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         aria-label="Quantity"
       />

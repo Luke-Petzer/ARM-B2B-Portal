@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { adminLoginAction } from "@/app/actions/auth";
 
 const schema = z.object({
@@ -20,6 +20,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function AdminLoginPage() {
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -70,13 +71,29 @@ export default function AdminLoginPage() {
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            disabled={isPending}
-            {...register("password")}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              disabled={isPending}
+              className="pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-sm font-medium text-destructive">
               {errors.password.message}

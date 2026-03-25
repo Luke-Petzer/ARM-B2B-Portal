@@ -282,6 +282,12 @@ export default function ProductDrawer({
                     step="0.01"
                     defaultValue={product?.price ?? ""}
                     placeholder="0.00"
+                    onKeyDown={(e) => {
+                      // Prevent negative numbers and scientific notation
+                      if (["e", "E", "+", "-"].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                     className="w-full h-10 pl-7 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
                   />
                 </div>
