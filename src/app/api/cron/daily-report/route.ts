@@ -29,8 +29,7 @@ export async function GET(req: Request): Promise<Response> {
       });
 
     if (uploadError) {
-      console.error("[cron/daily-report] Storage upload failed:", uploadError.message);
-      return Response.json({ error: uploadError.message }, { status: 500 });
+      console.error("[cron/daily-report] Storage upload failed (non-fatal):", uploadError.message);
     }
 
     return Response.json({ ok: true });
