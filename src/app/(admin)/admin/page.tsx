@@ -160,7 +160,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
     const assignee = raw.assignee as RawAssignee;
     return {
       id: o.id,
-      profile_id: (o as { profile_id?: string }).profile_id ?? "",
+      profile_id: raw.profile_id as string,
       reference_number: o.reference_number,
       created_at: o.created_at,
       status: o.status,
@@ -193,7 +193,6 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
           (o) => o.payment_method === "30_day_account" && o.status === "pending"
         )
         .map((o) => o.profile_id)
-        .filter(Boolean)
     ),
   ];
 
