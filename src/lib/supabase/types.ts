@@ -291,6 +291,7 @@ export interface Database {
           name: string;
           description: string | null;
           details: string | null;
+          pack_size: number;
           price: number;
           cost_price: number | null;
           category_id: string | null;
@@ -312,6 +313,7 @@ export interface Database {
           name: string;
           description?: string | null;
           details?: string | null;
+          pack_size?: number;
           price: number;
           cost_price?: number | null;
           category_id?: string | null;
@@ -333,6 +335,7 @@ export interface Database {
           name?: string;
           description?: string | null;
           details?: string | null;
+          pack_size?: number;
           price?: number;
           cost_price?: number | null;
           category_id?: string | null;
@@ -496,6 +499,7 @@ export interface Database {
         Row: {
           id: string;
           order_id: string;
+          pack_size: number;
           product_id: string | null;
           sku: string;
           product_name: string;
@@ -509,6 +513,7 @@ export interface Database {
         Insert: {
           id?: string;
           order_id: string;
+          pack_size?: number;
           product_id?: string | null;
           sku: string;
           product_name: string;
@@ -522,6 +527,7 @@ export interface Database {
         Update: {
           id?: string;
           order_id?: string;
+          pack_size?: number;
           product_id?: string | null;
           sku?: string;
           product_name?: string;
