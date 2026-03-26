@@ -4,17 +4,23 @@ import { useState, useTransition } from "react";
 import { ChevronDown, ChevronRight, Loader2, Search } from "lucide-react";
 import { reorderAction } from "@/app/actions/order";
 
+function getBuyerDisplay(status: string): { label: string; className: string } {
+  if (status === "cancelled") {
+    return { label: "Cancelled", className: "bg-red-50 text-red-600 border border-red-200" };
+  }
+  if (status === "dispatched") {
+    return { label: "Dispatched", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+  }
+  return { label: "Processing", className: "bg-blue-50 text-blue-700 border border-blue-200" };
+}
+
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    pending: "bg-amber-50 text-amber-700 border border-amber-200",
-    confirmed: "bg-sky-50 text-sky-700 border border-sky-200",
-    processing: "bg-blue-50 text-blue-700 border border-blue-200",
-    fulfilled: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    cancelled: "bg-red-50 text-red-600 border border-red-200",
-  };
+  const { label, className } = getBuyerDisplay(status);
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${map[status] ?? "bg-slate-100 text-slate-500 border border-slate-200"}`}>
-      {status}
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${className}`}
+    >
+      {label}
     </span>
   );
 }
@@ -110,7 +116,7 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search by reference, SKU, or status…"
-          className="h-9 w-full pl-9 pr-3 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+          className="h-10 w-full pl-9 pr-3 bg-white border border-gray-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
         />
       </div>
 
@@ -120,19 +126,19 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
         className="hidden md:grid items-center px-6 py-4 bg-gray-50/50 border-b border-gray-100"
         style={{ gridTemplateColumns: "140px 180px 1fr 140px 120px" }}
       >
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Date
         </span>
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Reference ID
         </span>
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Items
         </span>
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Total Cost
         </span>
-        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider text-right">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">
           Action
         </span>
       </div>
@@ -254,11 +260,11 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                 <div className="bg-white border border-gray-100 rounded shadow-sm divide-y divide-gray-50">
                   {/* Desktop column headers — hidden on mobile */}
                   <div className="hidden md:grid grid-cols-[1fr_2fr_1fr_80px_100px] px-4 py-2.5 bg-gray-50/30">
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">SKU</span>
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Description</span>
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Unit Price</span>
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider text-right">Qty</span>
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider text-right">Subtotal</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">SKU</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Unit Price</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Qty</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Subtotal</span>
                   </div>
 
                   {order.items.map((item) => (
