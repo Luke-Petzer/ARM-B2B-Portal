@@ -4,7 +4,6 @@ import { getSession } from "@/lib/auth/session";
 import { redirect, notFound } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
-import Image from "next/image";
 import { CheckCircle2, ArrowLeft, Download, Info } from "lucide-react";
 import CartClearer from "./CartClearer";
 
@@ -57,17 +56,6 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
 
         {/* Success card */}
         <div className="w-full max-w-[560px] bg-white border border-gray-100 rounded-3xl p-10 flex flex-col items-center text-center shadow-sm">
-          <div className="flex justify-start w-full mb-6">
-            <Image
-              src="/logo.png"
-              alt="AR Steel Manufacturing"
-              width={150}
-              height={36}
-              className="object-contain"
-              priority
-            />
-          </div>
-
           {/* Icon + heading */}
           <div className="mb-8">
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-6 mx-auto">
