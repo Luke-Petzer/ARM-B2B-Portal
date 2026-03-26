@@ -60,7 +60,7 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
 
         {/* Success card */}
         <div className="w-full max-w-[560px] bg-white border border-gray-100 rounded-3xl p-10 flex flex-col items-center text-center shadow-sm">
-          <div className="flex justify-start mb-6">
+          <div className="flex justify-start w-full mb-6">
             <Image
               src="/logo.png"
               alt="AR Steel Manufacturing"

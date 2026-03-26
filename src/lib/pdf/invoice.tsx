@@ -357,7 +357,7 @@ function Header({ order, config }: { order: Order; config: TenantConfig }) {
       <View style={styles.supplierBlock}>
         <Image
           src={LOGO_PATH}
-          style={{ width: 120, height: "auto", marginBottom: 8 }}
+          style={{ width: 120, height: 71, marginBottom: 8 }}
         />
         <Text style={styles.supplierName}>
           {config.trading_name ?? config.business_name}
