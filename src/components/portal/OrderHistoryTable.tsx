@@ -8,7 +8,7 @@ function getBuyerDisplay(status: string): { label: string; className: string } {
   if (status === "cancelled") {
     return { label: "Cancelled", className: "bg-red-50 text-red-600 border border-red-200" };
   }
-  if (status === "dispatched") {
+  if (status === "fulfilled") {
     return { label: "Dispatched", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
   }
   return { label: "Processing", className: "bg-blue-50 text-blue-700 border border-blue-200" };
@@ -65,7 +65,7 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
         const q = searchTerm.toLowerCase();
         return (
           o.reference_number.toLowerCase().includes(q) ||
-          o.status.toLowerCase().includes(q) ||
+          getBuyerDisplay(o.status).label.toLowerCase().includes(q) ||
           o.items.some(
             (i) =>
               i.sku.toLowerCase().includes(q) ||
