@@ -502,7 +502,7 @@ export async function uploadProductImageAction(
     .from("product-images")
     .upload(filePath, buffer, {
       contentType: file.type,
-      upsert: false,
+      upsert: true,
     });
 
   if (uploadError) {
