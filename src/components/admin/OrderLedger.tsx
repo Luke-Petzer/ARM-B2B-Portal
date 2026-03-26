@@ -66,6 +66,7 @@ interface OrderLedgerProps {
   dateFrom: string;
   dateTo: string;
   adminRole: "manager" | "employee";
+  isSuperAdmin?: boolean;
   currentAdminProfileId: string;
   /** Map of profile_id → CreditStatus for 30-day clients with pending orders */
   creditStatusByProfileId: Record<string, CreditStatus>;
@@ -463,6 +464,7 @@ export default function OrderLedger({
   dateFrom,
   dateTo,
   adminRole,
+  isSuperAdmin = false,
   currentAdminProfileId,
   creditStatusByProfileId,
 }: OrderLedgerProps) {

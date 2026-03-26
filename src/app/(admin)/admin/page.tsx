@@ -340,6 +340,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         dateFrom={dateFrom ?? ""}
         dateTo={dateTo ?? ""}
         adminRole={adminRole}
+        isSuperAdmin={session.isSuperAdmin}
         currentAdminProfileId={currentAdminProfileId}
         creditStatusByProfileId={creditStatusByProfileId}
       />

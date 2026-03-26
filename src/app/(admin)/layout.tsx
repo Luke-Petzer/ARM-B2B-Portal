@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
@@ -26,15 +25,7 @@ export default async function AdminLayout({
   const adminName = profile?.contact_name ?? "Admin";
   const adminEmail = profile?.email ?? "";
 
-  // Determine super admin status via Supabase Auth email
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const superEmail = process.env.ADMIN_SUPER_EMAIL;
-  const isSuperAdmin = Boolean(
-    superEmail && user?.email && user.email === superEmail
-  );
+  const isSuperAdmin = session.isSuperAdmin ?? false;
 
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-x-hidden font-inter">
