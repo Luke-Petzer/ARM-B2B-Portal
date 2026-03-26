@@ -127,6 +127,11 @@ export default function ProductDrawer({
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image is too large. Please upload an image under 2MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     setIsUploading(true);
     setError(null);
     try {
