@@ -11,6 +11,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Ordering Portal",
   description: "B2B Ordering Portal",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
