@@ -12,6 +12,10 @@ export type OrderStatus =
 export type PaymentMethod = "eft" | "30_day_account";
 export type PaymentStatus = "pending" | "verified" | "rejected";
 export type AddressType = "billing" | "shipping";
+// Distinct from PaymentStatus (payments table). These are the three valid
+// states for orders.payment_status — matches the DB check constraint added
+// in 20260325_feature_batch.sql and 20260321_order_payment_status.sql.
+export type OrderPaymentStatus = "unpaid" | "paid" | "credit_approved";
 
 export type Json =
   | string
@@ -422,7 +426,7 @@ export interface Database {
           delivery_instructions: string | null;
           notes: string | null;
           order_notes: string | null;
-          payment_status: string;
+          payment_status: OrderPaymentStatus;
           confirmed_at: string | null;
           fulfilled_at: string | null;
           cancelled_at: string | null;
@@ -445,7 +449,7 @@ export interface Database {
           delivery_instructions?: string | null;
           notes?: string | null;
           order_notes?: string | null;
-          payment_status?: string;
+          payment_status?: OrderPaymentStatus;
           confirmed_at?: string | null;
           fulfilled_at?: string | null;
           cancelled_at?: string | null;
@@ -468,7 +472,7 @@ export interface Database {
           delivery_instructions?: string | null;
           notes?: string | null;
           order_notes?: string | null;
-          payment_status?: string;
+          payment_status?: OrderPaymentStatus;
           confirmed_at?: string | null;
           fulfilled_at?: string | null;
           cancelled_at?: string | null;
@@ -755,6 +759,10 @@ export interface Database {
       generate_order_reference: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      create_order_atomic: {
+        Args: { p_order: Json; p_items: Json };
+        Returns: string; // uuid of the newly created order
       };
     };
 
