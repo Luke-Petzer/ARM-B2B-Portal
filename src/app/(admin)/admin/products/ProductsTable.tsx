@@ -215,6 +215,7 @@ export default function ProductsTable({
       </div>
 
       <ProductDrawer
+        key={editProduct?.id ?? "new"}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onSaved={handleSaved}
