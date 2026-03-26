@@ -189,55 +189,67 @@ export async function checkoutAction(
 
   const vatRate = Number(config.vat_rate ?? 0.15);
 
-  // 4. Re-fetch discount rules from DB for all product IDs (security: never trust client discount values)
+  // 4. Re-fetch ALL authoritative product fields from DB.
+  //    SECURITY (C-1): price is fetched here and used server-side exclusively.
+  //    The client-supplied unitPrice is intentionally discarded after validation.
   const productIds = items.map((i) => i.productId);
   const { data: productRows, error: productFetchError } = await adminClient
     .from("products")
-    .select("id, cost_price, pack_size, discount_type, discount_threshold, discount_value")
+    .select("id, price, cost_price, pack_size, discount_type, discount_threshold, discount_value")
     .in("id", productIds);
 
   if (productFetchError || !productRows) {
-    return { error: "Failed to fetch product discount data." };
+    return { error: "Failed to fetch product data." };
   }
 
-  // Build a lookup map (includes cost_price for order_items snapshot)
-  const discountMap = new Map(productRows.map((p) => [p.id, p]));
+  // Build a lookup map (price + cost_price + pack_size + discount rules)
+  const productMap = new Map(productRows.map((p) => [p.id, p]));
 
+  // Guard: every cart item must resolve to a live DB product.
+  // A missing entry means the product was deleted between page load and submit.
+  for (const item of items) {
+    if (!productMap.has(item.productId)) {
+      return { error: `Product "${item.name}" is no longer available. Please refresh your cart.` };
+    }
+  }
+
+  // C-1 FIX: compute effective price using DB price as the base.
+  // item.unitPrice (client-supplied) is never used in any financial calculation.
   function computeEffectiveUnitPrice(
-    item: z.infer<typeof CartItemSchema>,
-    dbProduct: { discount_type: string | null; discount_threshold: number | null; discount_value: number | null } | undefined
+    dbPrice: number,
+    dbProduct: { discount_type: string | null; discount_threshold: number | null; discount_value: number | null },
+    quantity: number
   ): number {
     if (
-      !dbProduct ||
       !dbProduct.discount_type ||
       dbProduct.discount_value == null ||
       dbProduct.discount_threshold == null ||
-      item.quantity < dbProduct.discount_threshold
+      quantity < dbProduct.discount_threshold
     )
-      return item.unitPrice;
+      return dbPrice;
     const val = Number(dbProduct.discount_value);
-    if (!isFinite(val)) return item.unitPrice;
+    if (!isFinite(val)) return dbPrice;
     if (dbProduct.discount_type === "percentage") {
-      return Math.max(0, parseFloat((item.unitPrice * (1 - val / 100)).toFixed(2)));
+      return Math.max(0, parseFloat((dbPrice * (1 - val / 100)).toFixed(2)));
     }
     // fixed
-    return Math.max(0, parseFloat((item.unitPrice - val).toFixed(2)));
+    return Math.max(0, parseFloat((dbPrice - val).toFixed(2)));
   }
 
-  // 5. Compute per-item effective prices and financials using DB-verified discount rules
-  const effectivePrices = items.map((item) =>
-    computeEffectiveUnitPrice(item, discountMap.get(item.productId))
-  );
+  // 5. Compute per-item financials entirely from DB-verified values
+  const effectivePrices = items.map((item) => {
+    const dbProduct = productMap.get(item.productId)!;
+    return computeEffectiveUnitPrice(Number(dbProduct.price), dbProduct, item.quantity);
+  });
   const lineTotals = items.map((item, idx) =>
     r2(effectivePrices[idx] * item.quantity)
   );
   const subtotal = r2(lineTotals.reduce((s, lt) => s + lt, 0));
   const totalDiscountAmount = r2(
-    items.reduce(
-      (acc, item, idx) =>
-        acc + r2((item.unitPrice - effectivePrices[idx]) * item.quantity),
-      0
-    )
+    items.reduce((acc, item, idx) => {
+      const dbPrice = Number(productMap.get(item.productId)!.price);
+      return acc + r2((dbPrice - effectivePrices[idx]) * item.quantity);
+    }, 0)
   );
   const vatAmount = r2(subtotal * vatRate);
   const totalAmount = r2(subtotal + vatAmount);
@@ -247,46 +259,28 @@ export async function checkoutAction(
   const paymentMethod = is30Day ? ("30_day_account" as const) : ("eft" as const);
   const initialStatus = "pending" as const;
 
-  // 7. Insert order row
+  // 7. Validate order notes
   if (orderNotes.length > 1000) {
     return { error: "Delivery instructions must be 1000 characters or fewer." };
   }
   const trimmedNotes = orderNotes.trim() || null;
-  const { data: order, error: orderError } = await adminClient
-    .from("orders")
-    .insert({
-      profile_id: session.profileId,
-      status: initialStatus,
-      payment_method: paymentMethod,
-      subtotal,
-      discount_amount: totalDiscountAmount,
-      vat_amount: vatAmount,
-      total_amount: totalAmount,
-      order_notes: trimmedNotes,
-    })
-    .select("*")
-    .single();
 
-  if (orderError || !order) {
-    console.error("[checkout] order insert:", orderError?.message);
-    return { error: "Failed to create order. Please try again." };
-  }
-
-  // 8. Insert order_items
-  const orderItemRows = items.map((item, idx) => {
-    const discountSaving = item.unitPrice - effectivePrices[idx];
-    const discountPct = item.unitPrice > 0
-      ? parseFloat(((discountSaving / item.unitPrice) * 100).toFixed(4))
+  // 8. Build line-item payloads — unit_price is now the DB-verified base price (C-1 fix).
+  //    cost_price and pack_size are snapshotted from DB for daily report integrity.
+  const orderItemPayloads = items.map((item, idx) => {
+    const dbProduct = productMap.get(item.productId)!;
+    const dbPrice = Number(dbProduct.price);
+    const discountSaving = dbPrice - effectivePrices[idx];
+    const discountPct = dbPrice > 0
+      ? parseFloat(((discountSaving / dbPrice) * 100).toFixed(4))
       : 0;
-    const dbProduct = discountMap.get(item.productId);
     return {
-      order_id: order.id,
       product_id: item.productId,
       sku: item.sku,
       product_name: item.name,
-      unit_price: item.unitPrice,
-      cost_price: dbProduct?.cost_price ?? null, // snapshot at order time for daily report
-      pack_size: dbProduct?.pack_size ?? 1,
+      unit_price: dbPrice,                      // verified server-side price
+      cost_price: dbProduct.cost_price ?? null, // snapshot for margin reporting
+      pack_size: dbProduct.pack_size,           // snapshot for display integrity
       quantity: item.quantity,
       discount_pct: discountPct,
       line_total: lineTotals[idx],
@@ -294,26 +288,41 @@ export async function checkoutAction(
     };
   });
 
-  const { data: insertedItems, error: itemsError } = await adminClient
-    .from("order_items")
-    .insert(orderItemRows)
-    .select("*");
+  // 9. C-2 FIX: Atomic order creation via Postgres function.
+  //    Both the orders row and all order_items rows are written in a single
+  //    transaction. If either INSERT fails, Postgres rolls back automatically —
+  //    no orphaned order rows, no compensating deletes.
+  const { data: newOrderId, error: rpcError } = await adminClient.rpc(
+    "create_order_atomic",
+    {
+      p_order: {
+        profile_id: session.profileId,
+        status: initialStatus,
+        payment_method: paymentMethod,
+        subtotal,
+        discount_amount: totalDiscountAmount,
+        vat_amount: vatAmount,
+        total_amount: totalAmount,
+        order_notes: trimmedNotes,
+      },
+      p_items: orderItemPayloads,
+    }
+  );
 
-  if (itemsError || !insertedItems) {
-    // Compensating delete — order_items failed, order is unusable
-    await adminClient.from("orders").delete().eq("id", order.id);
-    console.error("[checkout] order_items insert:", itemsError?.message);
-    return { error: "Failed to save order items. Please try again." };
+  if (rpcError || !newOrderId) {
+    console.error("[checkout] create_order_atomic:", rpcError?.message);
+    return { error: "Failed to create order. Please try again." };
   }
 
-  // 8. Fetch buyer profile for PDF / emails
-  const { data: profile } = await adminClient
-    .from("profiles")
-    .select("*")
-    .eq("id", session.profileId)
-    .single();
+  // 10. Fetch the full order row and items for PDF / email dispatch
+  const [{ data: order }, { data: insertedItems }, { data: profile }] =
+    await Promise.all([
+      adminClient.from("orders").select("*").eq("id", newOrderId).single(),
+      adminClient.from("order_items").select("*").eq("order_id", newOrderId),
+      adminClient.from("profiles").select("*").eq("id", session.profileId).single(),
+    ]);
 
-  // 9. Broadcast to admin Realtime channel so the Order Ledger updates live.
+  // 11. Broadcast to admin Realtime channel so the Order Ledger updates live.
   try {
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`, {
       method: "POST",
@@ -323,26 +332,26 @@ export async function checkoutAction(
         Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
       },
       body: JSON.stringify({
-        messages: [{ topic: "admin-orders", event: "new_order", payload: { orderId: order.id } }],
+        messages: [{ topic: "admin-orders", event: "new_order", payload: { orderId: newOrderId } }],
       }),
     });
   } catch (err) {
     console.error("[broadcast] fetch failed:", err);
   }
 
-  // 10. Dispatch fulfillment emails (non-blocking — failure must not abort checkout)
-  if (profile) {
+  // 12. Dispatch fulfillment emails (non-blocking — failure must not abort checkout)
+  if (order && insertedItems && profile) {
     dispatchFulfillmentEmails(order, insertedItems, profile, config).catch(
       (err: unknown) =>
         console.error("[fulfillment] unhandled error:", err)
     );
   }
 
-  // 10. Divergent redirect
+  // 13. Divergent redirect
   if (is30Day) {
-    redirect(`/checkout/confirmed?orderId=${order.id}` as Route);
+    redirect(`/checkout/confirmed?orderId=${newOrderId}` as Route);
   } else {
-    redirect(`/checkout/payment?orderId=${order.id}` as Route);
+    redirect(`/checkout/payment?orderId=${newOrderId}` as Route);
   }
 }
 
