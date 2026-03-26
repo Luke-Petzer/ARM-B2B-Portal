@@ -58,7 +58,7 @@ export default async function StatementPage() {
       .from("orders")
       .select(
         `id, reference_number, confirmed_at, total_amount, payment_status,
-         order_items ( id )`
+         order_items ( id, sku, product_name, unit_price, quantity, line_total )`
       )
       .eq("profile_id", session.profileId)
       .in("payment_status", ["unpaid", "credit_approved"])
@@ -76,15 +76,20 @@ export default async function StatementPage() {
   const displayName =
     profile?.trading_name ?? profile?.business_name ?? "Your Account";
 
-  type RawOrder = NonNullable<typeof ordersResult.data>[number];
-
-  const orders = (ordersResult.data ?? []).map((o: RawOrder) => ({
+  const orders = (ordersResult.data ?? []).map((o) => ({
     id: o.id,
     reference_number: o.reference_number,
     confirmed_at: o.confirmed_at,
     total_amount: Number(o.total_amount),
     payment_status: o.payment_status,
-    item_count: Array.isArray(o.order_items) ? o.order_items.length : 0,
+    items: (o.order_items ?? []).map((item: any) => ({
+      id: item.id,
+      sku: item.sku,
+      product_name: item.product_name,
+      unit_price: Number(item.unit_price),
+      quantity: item.quantity,
+      line_total: Number(item.line_total),
+    })),
   }));
 
   const totalOutstanding = orders.reduce((sum, o) => sum + o.total_amount, 0);
@@ -122,46 +127,63 @@ export default async function StatementPage() {
             </div>
           ) : (
             <>
-              {/* Orders list */}
-              <div className="flex flex-col gap-3">
-                {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-white border border-gray-100 rounded-xl px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm"
-                  >
-                    {/* Left: ref + date + items */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-semibold text-slate-900">
-                        #{order.reference_number}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {formatDate(order.confirmed_at)} &middot;{" "}
-                        {order.item_count}{" "}
-                        {order.item_count === 1 ? "item" : "items"}
-                      </span>
-                    </div>
-
-                    {/* Right: status + amount */}
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      <PaymentStatusBadge status={order.payment_status} />
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                        {formatZAR(order.total_amount)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer: total outstanding */}
-              <div className="mt-6 flex justify-end">
-                <div className="bg-slate-900 text-white rounded-xl px-6 py-4 flex items-center gap-8">
-                  <span className="text-sm font-medium opacity-80">
-                    Total Outstanding
-                  </span>
-                  <span className="text-lg font-bold tabular-nums">
-                    {formatZAR(totalOutstanding)}
-                  </span>
-                </div>
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[140px]">Order Ref</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[110px]">Date</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Items</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[120px]">Order Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order, idx) => (
+                      <tr
+                        key={order.id}
+                        className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}
+                      >
+                        <td className="px-4 py-4 align-top">
+                          <span className="font-mono text-xs font-semibold text-slate-700">
+                            {order.reference_number}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-top text-xs text-slate-500 whitespace-nowrap">
+                          {new Date(order.confirmed_at).toLocaleDateString("en-ZA", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="px-4 py-4 align-top">
+                          <ul className="space-y-1">
+                            {order.items.map((item) => (
+                              <li key={item.id} className="flex items-baseline gap-2 text-xs">
+                                <span className="font-mono text-slate-400 w-[64px] shrink-0">{item.sku}</span>
+                                <span className="text-slate-700 flex-1">{item.product_name}</span>
+                                <span className="text-slate-500 shrink-0">×{item.quantity}</span>
+                                <span className="font-mono text-slate-600 shrink-0 w-[80px] text-right">{formatZAR(item.line_total)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-4 py-4 align-top text-right font-mono text-sm font-semibold text-slate-900">
+                          {formatZAR(order.total_amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-900 bg-white">
+                      <td colSpan={3} className="px-4 py-4 text-sm font-semibold text-slate-700">
+                        Total Outstanding
+                      </td>
+                      <td className="px-4 py-4 text-right font-mono text-base font-bold text-slate-900">
+                        {formatZAR(totalOutstanding)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </>
           )}
