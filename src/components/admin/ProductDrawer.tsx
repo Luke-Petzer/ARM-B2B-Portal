@@ -128,10 +128,13 @@ export default function ProductDrawer({
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
     setIsUploading(true);
+    setError(null);
     try {
       const url = await uploadProductImage(file);
       setPreviewUrl(url);
       setUploadedImageUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed.");
     } finally {
       setIsUploading(false);
     }

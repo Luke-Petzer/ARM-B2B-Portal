@@ -1082,6 +1082,23 @@ CREATE POLICY "admins_select_audit_log"
 
 
 -- ============================================================
+-- STORAGE: product-images bucket
+-- ============================================================
+-- Public bucket — images are served directly via getPublicUrl().
+-- The adminClient (service-role) bypasses RLS for writes;
+-- reads are unrestricted (public bucket, no auth policy needed).
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'product-images',
+  'product-images',
+  true,
+  10485760,           -- 10 MB
+  ARRAY['image/jpeg','image/png','image/webp','image/gif','image/svg+xml']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
 -- END OF SCRIPT
 -- ============================================================
 -- After running:
@@ -1090,4 +1107,5 @@ CREATE POLICY "admins_select_audit_log"
 --      { "role": "admin", "business_name": "Your Business", "contact_name": "Your Name" }
 --   3. The trg_on_auth_user_created trigger will auto-create the profile row.
 --   4. Update the tenant_config row (id=1) with your real bank details and branding.
+--   5. The product-images storage bucket is created above (public, 10 MB limit).
 -- ============================================================
