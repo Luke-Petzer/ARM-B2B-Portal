@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition } from "react";
 import { Loader2, Info } from "lucide-react";
 import {
   Sheet,
@@ -16,9 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { createClientAction, updateClientAction, bulkMarkOrdersSettledAction } from "@/app/actions/admin";
-import type { UnpaidOrder } from "@/app/(admin)/admin/clients/ClientsTable";
+import { createClientAction, updateClientAction } from "@/app/actions/admin";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,7 +44,6 @@ interface ClientDrawerProps {
   onClose: () => void;
   onSaved: () => void;
   client?: ClientForDrawer | null;
-  unpaidOrders?: UnpaidOrder[];
 }
 
 // ---------------------------------------------------------------------------
@@ -91,169 +88,6 @@ function InputField({
   );
 }
 
-function fmtCurrency(n: number) {
-  return `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-ZA", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Credit Utilization section
-// ---------------------------------------------------------------------------
-
-function CreditSection({
-  client,
-  unpaidOrders,
-  onSettled,
-}: {
-  client: ClientForDrawer;
-  unpaidOrders: UnpaidOrder[];
-  onSettled: () => void;
-}) {
-  const creditLimit = client.credit_limit ?? 0;
-  const creditUsed = unpaidOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const available = creditLimit - creditUsed;
-  const pct = creditLimit > 0 ? Math.min(100, (creditUsed / creditLimit) * 100) : 0;
-  const isCritical = pct >= 90;
-
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isPending, startTransition] = useTransition();
-  const [settleError, setSettleError] = useState<string | null>(null);
-
-  const allSelected =
-    unpaidOrders.length > 0 && selectedIds.size === unpaidOrders.length;
-  const someSelected = selectedIds.size > 0;
-
-  const toggleOne = useCallback((id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback((checked: boolean) => {
-    setSelectedIds(checked ? new Set(unpaidOrders.map((o) => o.id)) : new Set());
-  }, [unpaidOrders]);
-
-  const handleSettleSelected = () => {
-    setSettleError(null);
-    startTransition(async () => {
-      const result = await bulkMarkOrdersSettledAction(Array.from(selectedIds));
-      if (result.error) {
-        setSettleError(result.error);
-      } else {
-        setSelectedIds(new Set());
-        onSettled();
-      }
-    });
-  };
-
-  return (
-    <div className="pt-2 border-t border-slate-100 space-y-4">
-      {/* Progress bar */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <FieldLabel>Credit Utilization</FieldLabel>
-          <span className={`text-[11px] font-medium ${isCritical ? "text-red-600" : "text-slate-400"}`}>
-            {pct.toFixed(0)}%
-          </span>
-        </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${isCritical ? "bg-red-500" : "bg-primary"}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[11px] text-slate-500">
-            {fmtCurrency(creditUsed)} utilized
-          </span>
-          <span className="text-[11px] text-slate-500">
-            {fmtCurrency(Math.max(0, available))} available of {fmtCurrency(creditLimit)}
-          </span>
-        </div>
-      </div>
-
-      {/* Unpaid orders list */}
-      <div>
-        {unpaidOrders.length === 0 ? (
-          <>
-            <FieldLabel>Unpaid Orders</FieldLabel>
-            <p className="text-[12px] text-slate-400 py-2">No outstanding orders.</p>
-          </>
-        ) : (
-          <>
-            {/* Header row: label + Select All */}
-            <div className="flex items-center justify-between mb-2">
-              <FieldLabel>Unpaid Orders</FieldLabel>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={(checked) => toggleAll(Boolean(checked))}
-                  id="select-all-orders"
-                />
-                <span className="text-[11px] text-slate-500">Select all</span>
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              {unpaidOrders.map((order) => (
-                <label
-                  key={order.id}
-                  htmlFor={`order-${order.id}`}
-                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
-                >
-                  <Checkbox
-                    id={`order-${order.id}`}
-                    checked={selectedIds.has(order.id)}
-                    onCheckedChange={(checked) => toggleOne(order.id, Boolean(checked))}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-slate-900">
-                      #{order.reference_number}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {fmtDate(order.created_at)} · {fmtCurrency(order.total_amount)}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            {settleError && (
-              <p className="text-xs text-red-600 mt-2">{settleError}</p>
-            )}
-
-            {/* Settle Selected button */}
-            <button
-              type="button"
-              disabled={!someSelected || isPending}
-              onClick={handleSettleSelected}
-              className="mt-3 w-full h-9 px-4 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Settling…
-                </>
-              ) : (
-                `Settle Selected${someSelected ? ` (${selectedIds.size})` : ""}`
-              )}
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -263,7 +97,6 @@ export default function ClientDrawer({
   onClose,
   onSaved,
   client,
-  unpaidOrders = [],
 }: ClientDrawerProps) {
   const isEdit = Boolean(client);
   const [isPending, startTransition] = useTransition();
@@ -400,24 +233,13 @@ export default function ClientDrawer({
               </div>
 
               {is30Day && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputField
-                      name="credit_limit"
-                      label="Credit Limit (R)"
-                      type="number"
-                      defaultValue={client?.credit_limit ?? ""}
-                      placeholder="0.00"
-                    />
-                    <InputField
-                      name="payment_terms_days"
-                      label="Terms (days)"
-                      type="number"
-                      defaultValue={client?.payment_terms_days ?? ""}
-                      placeholder="30"
-                    />
-                  </div>
-                </>
+                <InputField
+                  name="payment_terms_days"
+                  label="Payment Terms (days)"
+                  type="number"
+                  defaultValue={client?.payment_terms_days ?? ""}
+                  placeholder="30"
+                />
               )}
 
               <InputField
@@ -427,15 +249,6 @@ export default function ClientDrawer({
                 placeholder="e.g. 4123456789"
               />
             </div>
-
-            {/* Credit utilization (30-day edit mode only) */}
-            {isEdit && is30Day && client && (
-              <CreditSection
-                client={client}
-                unpaidOrders={unpaidOrders}
-                onSettled={onSaved}
-              />
-            )}
 
             {/* Notes */}
             <div className="pt-2 border-t border-slate-100">

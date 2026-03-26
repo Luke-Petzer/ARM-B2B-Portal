@@ -6,6 +6,7 @@ import { Plus, Search } from "lucide-react";
 import ClientDrawer, {
   type ClientForDrawer,
 } from "@/components/admin/ClientDrawer";
+import CreditDrawer from "@/components/admin/CreditDrawer";
 
 export interface UnpaidOrder {
   id: string;
@@ -57,6 +58,8 @@ export default function ClientsTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<ClientForDrawer | null>(null);
+  const [creditDrawerOpen, setCreditDrawerOpen] = useState(false);
+  const [creditClient, setCreditClient] = useState<ClientForDrawer | null>(null);
 
   const filteredClients = searchTerm.trim()
     ? clients.filter((c) => {
@@ -82,6 +85,11 @@ export default function ClientsTable({
   const handleOpenEdit = (client: ClientForDrawer) => {
     setEditClient(client);
     setDrawerOpen(true);
+  };
+
+  const handleOpenCredit = (client: ClientForDrawer) => {
+    setCreditClient(client);
+    setCreditDrawerOpen(true);
   };
 
   return (
@@ -183,13 +191,24 @@ export default function ClientsTable({
                     <StatusBadge active={client.is_active} />
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(client)}
-                      className="h-8 px-3 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      {client.role === "buyer_30_day" && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCredit(client)}
+                          className="h-8 px-3 text-xs font-medium border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        >
+                          Credit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(client)}
+                        className="h-8 px-3 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -204,8 +223,18 @@ export default function ClientsTable({
         onClose={() => setDrawerOpen(false)}
         onSaved={handleSaved}
         client={editClient}
-        unpaidOrders={editClient ? (unpaidOrdersByClientId[editClient.id] ?? []) : []}
       />
+
+      {creditClient && (
+        <CreditDrawer
+          key={`credit-${creditClient.id}`}
+          open={creditDrawerOpen}
+          onClose={() => setCreditDrawerOpen(false)}
+          onSaved={handleSaved}
+          client={creditClient}
+          unpaidOrders={unpaidOrdersByClientId[creditClient.id] ?? []}
+        />
+      )}
     </>
   );
 }

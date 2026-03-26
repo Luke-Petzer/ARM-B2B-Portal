@@ -8,8 +8,11 @@ import {
   Download,
   CheckCircle,
   Loader2,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
-import { approveOrderAction, assignOrderAction, exportOrdersCsvAction } from "@/app/actions/admin";
+import { approveOrderAction, assignOrderAction, exportOrdersCsvAction, sendClientStatementAction } from "@/app/actions/admin";
+import type { CreditStatus } from "@/lib/credit/checkCreditStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +39,7 @@ export interface OrderRow {
   payment_status: string | null;
   assigned_to: string | null;
   assignee_email: string | null;
+  profile_id: string;
   subtotal: number;
   vat_amount: number;
   total_amount: number;
@@ -63,6 +67,8 @@ interface OrderLedgerProps {
   dateTo: string;
   adminRole: "manager" | "employee";
   currentAdminProfileId: string;
+  /** Map of profile_id → CreditStatus for 30-day clients with pending orders */
+  creditStatusByProfileId: Record<string, CreditStatus>;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,16 +175,20 @@ function ApproveDialog({
 function ExpandedRow({
   order,
   currentAdminProfileId,
+  creditStatus,
   onApproved,
   onAssigned,
 }: {
   order: OrderRow;
   currentAdminProfileId: string;
+  creditStatus: CreditStatus | null;
   onApproved: (id: string, update: { status?: string; payment_status: string }) => void;
   onAssigned: (id: string, assignedTo: string, email: string) => void;
 }) {
   const [isApproving, startApprove] = useTransition();
   const [isAssigning, startAssign] = useTransition();
+  const [isSendingStatement, startSendStatement] = useTransition();
+  const [statementResult, setStatementResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleApprove = (approvalType: "paid" | "credit_approved") => {
@@ -213,6 +223,26 @@ function ExpandedRow({
       }
     });
   };
+
+  const handleSendStatement = () => {
+    setStatementResult(null);
+    startSendStatement(async () => {
+      const result = await sendClientStatementAction(order.profile_id);
+      if (result?.error) {
+        setStatementResult({ ok: false, message: result.error });
+      } else {
+        setStatementResult({ ok: true, message: "Statement sent." });
+      }
+    });
+  };
+
+  const creditBlocked = creditStatus?.blocked ?? false;
+  const creditBlockReason =
+    creditStatus?.reason === "overdue"
+      ? "Overdue invoices from the previous statement period."
+      : creditStatus?.reason === "limit_exceeded"
+      ? "Credit limit exceeded."
+      : null;
 
   // Build the assignee display badge text
   const assigneeName = order.assigned_to
@@ -312,12 +342,39 @@ function ExpandedRow({
             </div>
           )}
 
+          {/* Credit block banner — 30-day orders only */}
+          {order.payment_method === "30_day_account" && creditBlocked && creditBlockReason && (
+            <div className="mt-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-700 font-medium">{creditBlockReason} Credit approval is disabled.</p>
+            </div>
+          )}
+
           {/* Actions row */}
           <div className="flex items-center justify-between mt-4">
-            <span className="text-xs text-slate-400">
-              Created: {fmtDate(order.created_at)} ·{" "}
-              <span className="capitalize">{order.payment_method.replace(/_/g, " ")}</span>
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-400">
+                Created: {fmtDate(order.created_at)} ·{" "}
+                <span className="capitalize">{order.payment_method.replace(/_/g, " ")}</span>
+              </span>
+              {/* Send Statement — 30-day orders */}
+              {order.payment_method === "30_day_account" && (
+                <button
+                  type="button"
+                  onClick={handleSendStatement}
+                  disabled={isSendingStatement}
+                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {isSendingStatement ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  Send Statement
+                </button>
+              )}
+              {statementResult && (
+                <span className={`text-xs ${statementResult.ok ? "text-emerald-600" : "text-red-600"}`}>
+                  {statementResult.message}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-4">
               {error && (
                 <span className="text-xs text-red-600">{error}</span>
@@ -335,14 +392,35 @@ function ExpandedRow({
               {/* ── 30-Day: two buttons for pending orders ── */}
               {order.status === "pending" && order.payment_method === "30_day_account" && (
                 <>
-                  <ApproveDialog
-                    label="Approve on Credit"
-                    description="Approves this order against the client's credit account. Revenue is recognised now."
-                    confirmLabel="Approve on Credit"
-                    onConfirm={() => handleApprove("credit_approved")}
-                    isLoading={isApproving}
-                    variant="secondary"
-                  />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={isApproving || creditBlocked}
+                        className="h-9 px-4 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        Approve on Credit
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm: Approve on Credit</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Approves this order against the client&apos;s credit account. Revenue is recognised now.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleApprove("credit_approved")}
+                          className="bg-sky-600 hover:bg-sky-700 text-white"
+                        >
+                          Approve on Credit
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <ApproveDialog
                     label="Approve & Mark Paid"
                     description="Client is paying immediately. This marks the order as paid and notifies dispatch."
@@ -386,6 +464,7 @@ export default function OrderLedger({
   dateTo,
   adminRole,
   currentAdminProfileId,
+  creditStatusByProfileId,
 }: OrderLedgerProps) {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
@@ -572,6 +651,7 @@ export default function OrderLedger({
                     <ExpandedRow
                       order={order}
                       currentAdminProfileId={currentAdminProfileId}
+                      creditStatus={creditStatusByProfileId[order.profile_id] ?? null}
                       onApproved={handleApproved}
                       onAssigned={handleAssigned}
                     />
