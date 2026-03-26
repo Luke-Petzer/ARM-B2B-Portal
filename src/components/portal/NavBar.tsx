@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X, Loader2, ShoppingCart } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useCartStore } from "@/lib/cart/store";
+import { useLogoutStore } from "@/lib/ui/logout-store";
 import type { Route } from "next";
 import type { AppRole } from "@/lib/supabase/types";
 
@@ -29,9 +29,8 @@ export default function NavBar({ role }: NavBarProps) {
   ];
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoggingOut, startLogout] = useTransition();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [isPending, startLogout] = useTransition();
+  const setLoggingOut = useLogoutStore((s) => s.setLoggingOut);
 
   // Live cart count for mobile badge — sum of all item quantities
   const cartCount = useCartStore((s) =>
@@ -39,6 +38,7 @@ export default function NavBar({ role }: NavBarProps) {
   );
 
   const handleLogout = () => {
+    setLoggingOut(true);
     startLogout(async () => {
       await logoutAction();
     });
@@ -46,20 +46,6 @@ export default function NavBar({ role }: NavBarProps) {
 
   return (
     <>
-      {/* Full-screen overlay while logout is in flight — rendered via portal so it
-          escapes any overflow/backdrop-filter containing block in the layout tree */}
-      {isLoggingOut && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 text-slate-900 animate-spin" />
-            <p className="text-sm font-medium text-slate-600">
-              Logging out safely...
-            </p>
-          </div>
-        </div>,
-        document.body
-      )}
-
       <nav className="h-[64px] border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-50">
         {/* Left — brand + nav links */}
         <div className="flex items-center gap-8">
@@ -119,10 +105,10 @@ export default function NavBar({ role }: NavBarProps) {
           <button
             type="button"
             onClick={handleLogout}
-            disabled={isLoggingOut}
+            disabled={isPending}
             className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-4 py-2 border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
-            {isLoggingOut ? (
+            {isPending ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : null}
             Logout
@@ -173,10 +159,10 @@ export default function NavBar({ role }: NavBarProps) {
               <button
                 type="button"
                 onClick={handleLogout}
-                disabled={isLoggingOut}
+                disabled={isPending}
                 className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition-colors w-full disabled:opacity-50 disabled:pointer-events-none"
               >
-                {isLoggingOut ? (
+                {isPending ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : null}
                 Logout
