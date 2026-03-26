@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -29,6 +30,8 @@ export default function NavBar({ role }: NavBarProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, startLogout] = useTransition();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Live cart count for mobile badge — sum of all item quantities
   const cartCount = useCartStore((s) =>
@@ -43,8 +46,9 @@ export default function NavBar({ role }: NavBarProps) {
 
   return (
     <>
-      {/* Full-screen overlay while logout is in flight */}
-      {isLoggingOut && (
+      {/* Full-screen overlay while logout is in flight — rendered via portal so it
+          escapes any overflow/backdrop-filter containing block in the layout tree */}
+      {isLoggingOut && mounted && createPortal(
         <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-8 h-8 text-slate-900 animate-spin" />
@@ -52,7 +56,8 @@ export default function NavBar({ role }: NavBarProps) {
               Logging out safely...
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <nav className="h-[64px] border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-50">
