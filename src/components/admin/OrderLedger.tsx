@@ -177,6 +177,7 @@ function ExpandedRow({
   order,
   currentAdminProfileId,
   creditStatus,
+  isSuperAdmin,
   onApproved,
   onAssigned,
   onCancelled,
@@ -184,6 +185,7 @@ function ExpandedRow({
   order: OrderRow;
   currentAdminProfileId: string;
   creditStatus: CreditStatus | null;
+  isSuperAdmin: boolean;
   onApproved: (id: string, update: { status?: string; payment_status: string }) => void;
   onAssigned: (id: string, assignedTo: string, email: string) => void;
   onCancelled: (id: string) => void;
@@ -194,6 +196,7 @@ function ExpandedRow({
   const [isSendingStatement, startSendStatement] = useTransition();
   const [statementResult, setStatementResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creditOverrideAcknowledged, setCreditOverrideAcknowledged] = useState(false);
 
   const handleApprove = (approvalType: "paid" | "credit_approved") => {
     setError(null);
@@ -254,13 +257,22 @@ function ExpandedRow({
     });
   };
 
-  const creditBlocked = creditStatus?.blocked ?? false;
-  const creditBlockReason =
-    creditStatus?.reason === "overdue"
-      ? "Overdue invoices from the previous statement period."
-      : creditStatus?.reason === "limit_exceeded"
-      ? "Credit limit exceeded."
-      : null;
+  const isOverdue = creditStatus?.reason === "overdue";
+
+  // Prospective liability: existing outstanding + this order's total
+  const prospectiveTotal = (creditStatus?.outstanding ?? 0) + order.total_amount;
+  const willExceedLimit =
+    creditStatus?.creditLimit != null &&
+    creditStatus.creditLimit > 0 &&
+    prospectiveTotal > creditStatus.creditLimit;
+
+  // Hard block (all roles): overdue invoices from previous period
+  // Soft block (employees only): credit limit would be exceeded
+  const isHardBlocked = isOverdue;
+  const approveOnCreditDisabled =
+    isApproving ||
+    isHardBlocked ||
+    (willExceedLimit && (!isSuperAdmin || !creditOverrideAcknowledged));
 
   // Build the assignee display badge text
   const assigneeName = order.assigned_to
@@ -360,11 +372,43 @@ function ExpandedRow({
             </div>
           )}
 
-          {/* Credit block banner — 30-day orders only */}
-          {order.payment_method === "30_day_account" && creditBlocked && creditBlockReason && (
+          {/* Credit banners — 30-day orders only */}
+          {order.payment_method === "30_day_account" && isOverdue && (
             <div className="mt-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-              <p className="text-xs text-red-700 font-medium">{creditBlockReason} Credit approval is disabled.</p>
+              <p className="text-xs text-red-700 font-medium">Overdue invoices from the previous statement period. Credit approval is disabled.</p>
+            </div>
+          )}
+          {order.payment_method === "30_day_account" && !isOverdue && willExceedLimit && creditStatus?.creditLimit != null && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-red-700 uppercase tracking-wider mb-1">⚠ Credit Limit Violation</p>
+                  <p className="text-xs text-red-700">
+                    Approving this order would bring total liability to{" "}
+                    <span className="font-semibold">{ZAR.format(prospectiveTotal)}</span>
+                    {" "}— exceeding the approved credit limit of{" "}
+                    <span className="font-semibold">{ZAR.format(creditStatus.creditLimit)}</span>.
+                  </p>
+                  {!isSuperAdmin && (
+                    <p className="text-xs text-red-600 mt-1 font-medium">Approval blocked. Only a Super Admin can override.</p>
+                  )}
+                </div>
+              </div>
+              {isSuperAdmin && (
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={creditOverrideAcknowledged}
+                    onChange={(e) => setCreditOverrideAcknowledged(e.target.checked)}
+                    className="mt-0.5 h-3.5 w-3.5 rounded border-red-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-xs text-red-700">
+                    I acknowledge this order will exceed the client&apos;s credit limit and authorise approval.
+                  </span>
+                </label>
+              )}
             </div>
           )}
 
@@ -446,7 +490,16 @@ function ExpandedRow({
                     <AlertDialogTrigger asChild>
                       <button
                         type="button"
-                        disabled={isApproving || creditBlocked}
+                        disabled={approveOnCreditDisabled}
+                        title={
+                          isHardBlocked
+                            ? "Blocked: overdue invoices"
+                            : willExceedLimit && !isSuperAdmin
+                            ? "Approval blocked: Credit limit exceeded"
+                            : willExceedLimit && isSuperAdmin && !creditOverrideAcknowledged
+                            ? "Acknowledge the credit limit override above to enable"
+                            : undefined
+                        }
                         className="h-9 px-4 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
                       >
                         {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
@@ -709,6 +762,7 @@ export default function OrderLedger({
                       order={order}
                       currentAdminProfileId={currentAdminProfileId}
                       creditStatus={creditStatusByProfileId[order.profile_id] ?? null}
+                      isSuperAdmin={isSuperAdmin}
                       onApproved={handleApproved}
                       onAssigned={handleAssigned}
                       onCancelled={handleCancelled}

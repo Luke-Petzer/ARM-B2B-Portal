@@ -4,6 +4,10 @@ import { adminClient } from "@/lib/supabase/admin";
 export interface CreditStatus {
   blocked: boolean;
   reason: "overdue" | "limit_exceeded" | "status_indeterminate" | null;
+  /** Current sum of all unpaid/credit_approved confirmed orders */
+  outstanding: number;
+  /** Client's configured credit limit (null if not set) */
+  creditLimit: number | null;
 }
 
 /**
@@ -20,20 +24,35 @@ export async function checkCreditStatus(profileId: string): Promise<CreditStatus
   const now = new Date();
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
-  // Fetch all unpaid + credit_approved confirmed orders for this profile
-  const { data: orders, error } = await adminClient
-    .from("orders")
-    .select("id, total_amount, confirmed_at, payment_status")
-    .eq("profile_id", profileId)
-    .in("payment_status", ["unpaid", "credit_approved"])
-    .not("confirmed_at", "is", null);
+  // Fetch orders and profile in parallel
+  const [ordersResult, profileResult] = await Promise.all([
+    adminClient
+      .from("orders")
+      .select("id, total_amount, confirmed_at, payment_status")
+      .eq("profile_id", profileId)
+      .in("payment_status", ["unpaid", "credit_approved"])
+      .not("confirmed_at", "is", null),
+    adminClient
+      .from("profiles")
+      .select("credit_limit")
+      .eq("id", profileId)
+      .single(),
+  ]);
 
-  if (error || !orders) {
+  if (ordersResult.error || !ordersResult.data) {
     // Fail closed — a DB error is indeterminate state; safer to block than
     // to accidentally approve a client whose status we cannot verify.
-    console.error("[credit] failed to fetch orders for profileId:", profileId, error?.message);
-    return { blocked: true, reason: "status_indeterminate" };
+    console.error("[credit] failed to fetch orders for profileId:", profileId, ordersResult.error?.message);
+    return { blocked: true, reason: "status_indeterminate", outstanding: 0, creditLimit: null };
   }
+
+  const orders = ordersResult.data;
+  const creditLimit =
+    profileResult.data?.credit_limit != null
+      ? Number(profileResult.data.credit_limit)
+      : null;
+
+  const outstanding = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
   // Rule 1: any confirmed order from a previous statement period is overdue
   const hasOverdue = orders.some((o) => {
@@ -42,27 +61,13 @@ export async function checkCreditStatus(profileId: string): Promise<CreditStatus
   });
 
   if (hasOverdue) {
-    return { blocked: true, reason: "overdue" };
+    return { blocked: true, reason: "overdue", outstanding, creditLimit };
   }
 
   // Rule 2: outstanding balance exceeds credit limit
-  const { data: profile, error: profileError } = await adminClient
-    .from("profiles")
-    .select("credit_limit")
-    .eq("id", profileId)
-    .single();
-
-  if (profileError) {
-    console.error("[credit] failed to fetch profile for profileId:", profileId, profileError.message);
-    return { blocked: true, reason: "status_indeterminate" };
+  if (creditLimit != null && creditLimit > 0 && outstanding > creditLimit) {
+    return { blocked: true, reason: "limit_exceeded", outstanding, creditLimit };
   }
 
-  if (profile?.credit_limit != null && profile.credit_limit > 0) {
-    const outstanding = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-    if (outstanding > Number(profile.credit_limit)) {
-      return { blocked: true, reason: "limit_exceeded" };
-    }
-  }
-
-  return { blocked: false, reason: null };
+  return { blocked: false, reason: null, outstanding, creditLimit };
 }

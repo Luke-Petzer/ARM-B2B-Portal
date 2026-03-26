@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";

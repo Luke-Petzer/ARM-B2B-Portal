@@ -201,19 +201,13 @@ export default function CreditDrawer({
                 </div>
                 <div>
                   <FieldLabel>Available Credit (R)</FieldLabel>
-                  <input
-                    type="number"
-                    name="available_credit"
-                    defaultValue={client.available_credit ?? ""}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
-                  />
+                  <div className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 flex items-center select-none">
+                    {fmtCurrency(Math.max(0, available))}
+                  </div>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400">
-                Available credit is recalculated automatically when orders are settled, but can be overridden manually here.
+                Available credit is calculated automatically: Credit Limit − Current Outstanding Balance.
               </p>
             </div>
 
