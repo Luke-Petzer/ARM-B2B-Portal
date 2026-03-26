@@ -289,11 +289,13 @@ export async function approveOrderAction(
   await requireAdmin();
 
   const orderId = formData.get("orderId") as string | null;
-  const approvalType = (formData.get("approvalType") as string | null) ?? "paid";
+  const approvalTypeRaw = (formData.get("approvalType") as string | null) ?? "paid";
   if (!orderId) return { error: "Missing order ID." };
-  if (approvalType !== "paid" && approvalType !== "credit_approved") {
+  if (approvalTypeRaw !== "paid" && approvalTypeRaw !== "credit_approved") {
     return { error: "Invalid approval type." };
   }
+  // Narrowed to the literal union after the guard above — safe to assert.
+  const approvalType = approvalTypeRaw as "paid" | "credit_approved";
 
   // Fetch current state to determine which transition applies
   const { data: currentOrder, error: fetchError } = await adminClient
