@@ -859,7 +859,7 @@ function DispatchSheetDocument({ order, items, profile, deliveryAddress }: Dispa
         {/* Order notes */}
         {order.order_notes && (
           <View style={dsStyles.notesBox}>
-            <Text style={dsStyles.notesLabel}>Order Notes / Delivery Instructions</Text>
+            <Text style={dsStyles.notesLabel}>Order Notes</Text>
             <Text style={dsStyles.notesValue}>{order.order_notes}</Text>
           </View>
         )}

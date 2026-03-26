@@ -211,7 +211,7 @@ export default function SupplierInvoice({
           {orderNotes && (
             <Section style={{ backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "8px", padding: "16px 20px", marginBottom: "16px" }}>
               <Text style={{ fontSize: "10px", fontWeight: "600", color: "#ea580c", textTransform: "uppercase" as const, letterSpacing: "0.8px", margin: "0 0 6px" }}>
-                Message / Instructions from Buyer
+                Order Notes
               </Text>
               <Text style={{ fontSize: "13px", color: "#334155", lineHeight: "1.6", margin: "0" }}>
                 {orderNotes}

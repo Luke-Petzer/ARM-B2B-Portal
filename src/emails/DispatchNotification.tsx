@@ -220,7 +220,7 @@ export default function DispatchNotification({
                   margin: "0 0 6px",
                 }}
               >
-                Order Notes / Delivery Instructions
+                Order Notes
               </Text>
               <Text
                 style={{

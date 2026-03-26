@@ -168,13 +168,13 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
             )}
           </div>
 
-          {/* Delivery Instructions — shown only if buyer provided notes */}
+          {/* Order Notes — shown only if buyer provided notes */}
           {order.order_notes && (
             <div className="w-full flex items-start gap-4 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 text-left">
               <Info className="w-4 h-4 mt-0.5 text-blue-400 flex-shrink-0" />
               <div>
                 <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider mb-1">
-                  Your Delivery Instructions
+                  Your Order Notes
                 </p>
                 <p className="text-sm text-slate-700">{order.order_notes}</p>
               </div>

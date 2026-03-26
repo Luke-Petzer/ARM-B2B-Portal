@@ -224,7 +224,7 @@ export default function BuyerReceipt({
           {orderNotes && (
             <Section style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "16px 20px", marginBottom: "16px" }}>
               <Text style={{ fontSize: "10px", fontWeight: "600", color: "#3b82f6", textTransform: "uppercase" as const, letterSpacing: "0.8px", margin: "0 0 6px" }}>
-                Your Delivery Instructions
+                Your Order Notes
               </Text>
               <Text style={{ fontSize: "13px", color: "#334155", lineHeight: "1.6", margin: "0" }}>
                 {orderNotes}
