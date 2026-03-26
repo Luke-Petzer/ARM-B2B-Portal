@@ -89,7 +89,7 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
           ) : (
             <div>
               {/* Desktop header row — hidden on mobile */}
-              <div className="hidden md:grid md:grid-cols-[1fr_2fr_1fr_1fr_1fr_48px] bg-slate-50 border-b border-gray-100 px-6 py-4">
+              <div className="hidden md:grid md:grid-cols-[1fr_2fr_1fr_1fr_1fr_48px] gap-x-6 bg-slate-50 border-b border-gray-100 px-6 py-4">
                 <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Product SKU</span>
                 <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Description</span>
                 <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Unit Price</span>
@@ -154,7 +154,7 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
                     </div>
 
                     {/* Desktop row — hidden on mobile, grid on md+ */}
-                    <div className="hidden md:grid md:grid-cols-[1fr_2fr_1fr_1fr_1fr_48px] items-center px-6 py-5">
+                    <div className="hidden md:grid md:grid-cols-[1fr_2fr_1fr_1fr_1fr_48px] gap-x-6 items-center px-6 py-5">
                       <span className="text-sm font-medium text-slate-900">{item.sku}</span>
                       <span className="text-sm text-gray-500">{item.name}</span>
                       <span className="text-sm text-slate-700">{ZAR.format(effectivePrice)}</span>
