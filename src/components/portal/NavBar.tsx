@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Loader2, ShoppingCart } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useCartStore } from "@/lib/cart/store";
-import { useLogoutStore } from "@/lib/ui/logout-store";
 import type { Route } from "next";
 import type { AppRole } from "@/lib/supabase/types";
 
@@ -30,7 +29,6 @@ export default function NavBar({ role }: NavBarProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPending, startLogout] = useTransition();
-  const setLoggingOut = useLogoutStore((s) => s.setLoggingOut);
 
   // Live cart count for mobile badge — sum of all item quantities
   const cartCount = useCartStore((s) =>
@@ -38,7 +36,6 @@ export default function NavBar({ role }: NavBarProps) {
   );
 
   const handleLogout = () => {
-    setLoggingOut(true);
     startLogout(async () => {
       await logoutAction();
     });
