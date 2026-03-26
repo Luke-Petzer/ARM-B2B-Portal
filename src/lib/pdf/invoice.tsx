@@ -6,6 +6,8 @@
  *   const pdfBuffer = await renderInvoiceToBuffer({ order, items, profile, config });
  */
 
+import path from "path";
+
 import {
   Document,
   Page,
@@ -14,9 +16,12 @@ import {
   StyleSheet,
   renderToBuffer,
   Font,
+  Image,
 } from "@react-pdf/renderer";
 
 import type { Database } from "@/lib/supabase/types";
+
+const LOGO_PATH = path.join(process.cwd(), "public", "logo.png");
 
 // ---------------------------------------------------------------------------
 // Prop types (Row shapes from DB types)
@@ -350,6 +355,10 @@ function Header({ order, config }: { order: Order; config: TenantConfig }) {
     <View style={styles.headerRow}>
       {/* Left — supplier identity */}
       <View style={styles.supplierBlock}>
+        <Image
+          src={LOGO_PATH}
+          style={{ width: 120, height: "auto", marginBottom: 8 }}
+        />
         <Text style={styles.supplierName}>
           {config.trading_name ?? config.business_name}
         </Text>
