@@ -19,7 +19,7 @@ export function AuthCard({ title, description, children }: AuthCardProps) {
       <Card className="w-full shadow-2xl border-0 overflow-hidden">
         {/* Logo sits on the same white background as logo.png — no visible border */}
         <div className="flex justify-center items-center px-10 pt-10 pb-6 bg-white">
-          <div className="relative w-full h-[100px]">
+          <div className="relative w-full max-w-[200px] h-[100px]">
             <Image
               src="/logo.png"
               alt="AR Steel Manufacturing"
