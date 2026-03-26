@@ -68,7 +68,7 @@ export async function getSession(
       .single();
 
     if (profile) {
-      const superEmail = process.env.ADMIN_SUPER_EMAIL;
+      const superEmails = (process.env.ADMIN_SUPER_EMAIL || "").split(",").map((e) => e.trim()).filter(Boolean);
       return {
         profileId: profile.id,
         role: profile.role,
@@ -76,7 +76,7 @@ export async function getSession(
         isBuyer: false,
         isAdmin: profile.role === "admin",
         adminRole: profile.admin_role ?? "employee",
-        isSuperAdmin: !!superEmail && user.email === superEmail,
+        isSuperAdmin: !!user.email && superEmails.includes(user.email),
         token: null,
       };
     }
