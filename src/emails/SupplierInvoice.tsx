@@ -209,11 +209,35 @@ export default function SupplierInvoice({
           </Section>
 
           {orderNotes && (
-            <Section style={{ backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "8px", padding: "16px 20px", marginBottom: "16px" }}>
-              <Text style={{ fontSize: "10px", fontWeight: "600", color: "#ea580c", textTransform: "uppercase" as const, letterSpacing: "0.8px", margin: "0 0 6px" }}>
-                Order Notes
+            <Section
+              style={{
+                backgroundColor: "#fefce8",
+                border: "2px solid #ca8a04",
+                borderRadius: "8px",
+                padding: "16px 20px",
+                marginBottom: "16px",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  color: "#92400e",
+                  margin: "0 0 8px",
+                  letterSpacing: "0.3px",
+                }}
+              >
+                ⚠️ CUSTOMER NOTE
               </Text>
-              <Text style={{ fontSize: "13px", color: "#334155", lineHeight: "1.6", margin: "0" }}>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#1e293b",
+                  lineHeight: "1.6",
+                  margin: "0",
+                  fontWeight: "500",
+                }}
+              >
                 {orderNotes}
               </Text>
             </Section>
