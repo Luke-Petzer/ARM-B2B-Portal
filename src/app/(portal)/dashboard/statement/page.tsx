@@ -44,7 +44,9 @@ export default async function StatementPage() {
          order_items ( id, sku, product_name, quantity, line_total )`
       )
       .eq("profile_id", session.profileId)
+      .eq("status", "confirmed")
       .in("payment_status", ["unpaid", "credit_approved"])
+      .not("confirmed_at", "is", null)
       .order("confirmed_at", { ascending: true }),
   ]);
 

@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   Send,
 } from "lucide-react";
-import { approveOrderAction, assignOrderAction, exportOrdersCsvAction, sendClientStatementAction } from "@/app/actions/admin";
+import { approveOrderAction, assignOrderAction, cancelOrderAction, exportOrdersCsvAction, sendClientStatementAction } from "@/app/actions/admin";
 import type { CreditStatus } from "@/lib/credit/checkCreditStatus";
 import {
   AlertDialog,
@@ -179,15 +179,18 @@ function ExpandedRow({
   creditStatus,
   onApproved,
   onAssigned,
+  onCancelled,
 }: {
   order: OrderRow;
   currentAdminProfileId: string;
   creditStatus: CreditStatus | null;
   onApproved: (id: string, update: { status?: string; payment_status: string }) => void;
   onAssigned: (id: string, assignedTo: string, email: string) => void;
+  onCancelled: (id: string) => void;
 }) {
   const [isApproving, startApprove] = useTransition();
   const [isAssigning, startAssign] = useTransition();
+  const [isCancelling, startCancel] = useTransition();
   const [isSendingStatement, startSendStatement] = useTransition();
   const [statementResult, setStatementResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,6 +210,20 @@ function ExpandedRow({
           status: isFirstApproval ? "confirmed" : order.status,
           payment_status: approvalType,
         });
+      }
+    });
+  };
+
+  const handleCancel = () => {
+    setError(null);
+    startCancel(async () => {
+      const fd = new FormData();
+      fd.set("orderId", order.id);
+      const result = await cancelOrderAction(fd);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        onCancelled(order.id);
       }
     });
   };
@@ -380,6 +397,38 @@ function ExpandedRow({
               {error && (
                 <span className="text-xs text-red-600">{error}</span>
               )}
+              {/* ── Cancel — pending orders only ── */}
+              {order.status === "pending" && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isCancelling}
+                      className="h-9 px-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                      Cancel Order
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently cancel order {order.reference_number}. The buyer will not be notified automatically. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCancel}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Yes, Cancel Order
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
               {/* ── EFT: single "Approve & Mark Paid" ── */}
               {order.status === "pending" && order.payment_method === "eft" && (
                 <ApproveDialog
@@ -511,6 +560,12 @@ export default function OrderLedger({
     },
     []
   );
+
+  const handleCancelled = useCallback((orderId: string) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: "cancelled" } : o))
+    );
+  }, []);
 
   const handleAssigned = useCallback((orderId: string, assignedTo: string, _email: string) => {
     setOrders((prev) =>
@@ -656,6 +711,7 @@ export default function OrderLedger({
                       creditStatus={creditStatusByProfileId[order.profile_id] ?? null}
                       onApproved={handleApproved}
                       onAssigned={handleAssigned}
+                      onCancelled={handleCancelled}
                     />
                   )}
                 </React.Fragment>

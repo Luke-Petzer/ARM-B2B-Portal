@@ -347,6 +347,51 @@ export async function approveOrderAction(
 }
 
 // ---------------------------------------------------------------------------
+// cancelOrderAction
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancels a pending order.
+ * Only allowed when the order is still in "pending" status — once confirmed
+ * (i.e. payment has been recognised), cancellation must be handled manually.
+ */
+export async function cancelOrderAction(
+  formData: FormData
+): Promise<{ error: string } | void> {
+  await requireAdmin();
+
+  const orderId = formData.get("orderId") as string | null;
+  if (!orderId) return { error: "Missing order ID." };
+
+  const { data: currentOrder, error: fetchError } = await adminClient
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .single();
+
+  if (fetchError || !currentOrder) return { error: "Order not found." };
+
+  if (currentOrder.status !== "pending") {
+    return { error: "Only pending orders can be cancelled." };
+  }
+
+  const { error } = await adminClient
+    .from("orders")
+    .update({
+      status: "cancelled" as const,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) {
+    console.error("[admin] cancelOrder:", error.message);
+    return { error: "Failed to cancel order. Please try again." };
+  }
+
+  revalidatePath("/admin");
+}
+
+// ---------------------------------------------------------------------------
 // exportOrdersCsvAction
 // ---------------------------------------------------------------------------
 
