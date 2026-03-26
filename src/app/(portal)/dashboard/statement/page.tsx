@@ -23,22 +23,6 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-function PaymentStatusBadge({ status }: { status: string }) {
-  const isCreditApproved = status === "credit_approved";
-  return (
-    <span
-      className={[
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-        isCreditApproved
-          ? "bg-blue-50 text-blue-700 border border-blue-200"
-          : "bg-amber-50 text-amber-700 border border-amber-200",
-      ].join(" ")}
-    >
-      {isCreditApproved ? "On Credit" : "Awaiting Payment"}
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -58,7 +42,7 @@ export default async function StatementPage() {
       .from("orders")
       .select(
         `id, reference_number, confirmed_at, total_amount, payment_status,
-         order_items ( id, sku, product_name, unit_price, quantity, line_total )`
+         order_items ( id, sku, product_name, quantity, line_total )`
       )
       .eq("profile_id", session.profileId)
       .in("payment_status", ["unpaid", "credit_approved"])
@@ -76,17 +60,24 @@ export default async function StatementPage() {
   const displayName =
     profile?.trading_name ?? profile?.business_name ?? "Your Account";
 
+  type RawItem = {
+    id: string;
+    sku: string;
+    product_name: string;
+    quantity: number;
+    line_total: number;
+  };
+
   const orders = (ordersResult.data ?? []).map((o) => ({
     id: o.id,
     reference_number: o.reference_number,
     confirmed_at: o.confirmed_at,
     total_amount: Number(o.total_amount),
     payment_status: o.payment_status,
-    items: (o.order_items ?? []).map((item: any) => ({
+    items: ((o.order_items ?? []) as RawItem[]).map((item) => ({
       id: item.id,
       sku: item.sku,
       product_name: item.product_name,
-      unit_price: Number(item.unit_price),
       quantity: item.quantity,
       line_total: Number(item.line_total),
     })),
@@ -149,11 +140,7 @@ export default async function StatementPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 align-top text-xs text-slate-500 whitespace-nowrap">
-                          {new Date(order.confirmed_at).toLocaleDateString("en-ZA", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatDate(order.confirmed_at)}
                         </td>
                         <td className="px-4 py-4 align-top">
                           <ul className="space-y-1">
