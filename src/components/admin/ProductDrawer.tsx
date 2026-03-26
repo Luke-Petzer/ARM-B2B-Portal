@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback } from "react";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud, Loader2, X, ImageOff } from "lucide-react";
 import {
@@ -111,6 +111,20 @@ export default function ProductDrawer({
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Re-hydrate all controlled state whenever the drawer opens or the product
+  // changes. useState() only runs its initialiser on first mount, so switching
+  // between products (or from create→edit) would leave stale values otherwise.
+  useEffect(() => {
+    if (open) {
+      setCategoryId(product?.category_id ?? "none");
+      setDiscountType(product?.discount_type ?? "none");
+      setPreviewUrl(product?.primaryImageUrl ?? null);
+      setUploadedImageUrl(null);
+      setError(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, product?.id]);
 
   // Reset preview when drawer opens with a different product
   const handleOpenChange = useCallback(
