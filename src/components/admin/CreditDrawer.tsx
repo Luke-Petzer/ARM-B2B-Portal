@@ -372,7 +372,7 @@ export default function CreditDrawer({
                     Saving…
                   </>
                 ) : (
-                  "Save Credit Settings"
+                  "Save"
                 )}
               </button>
             </div>

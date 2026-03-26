@@ -124,7 +124,7 @@ async function dispatchFulfillmentEmails(
     }
   }
 
-  // 3. Buyer receipt — no attachment
+  // 3. Buyer receipt — with proforma PDF attached
   if (profile.email) {
     const { error } = await resend.emails.send({
       from: fromAddress,
@@ -140,6 +140,12 @@ async function dispatchFulfillmentEmails(
         supportEmail: config.support_email,
         orderNotes: order.order_notes ?? null,
       }),
+      attachments: [
+        {
+          filename: `Proforma-${order.reference_number}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
     });
     if (error) {
       console.error("[fulfillment] buyer receipt:", error.message);
