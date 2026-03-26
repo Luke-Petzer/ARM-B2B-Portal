@@ -81,7 +81,7 @@ export default function BuyerLoginPage() {
           )}
         </Button>
 
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground">
           Admin?{" "}
           <a
             href="/admin/login"

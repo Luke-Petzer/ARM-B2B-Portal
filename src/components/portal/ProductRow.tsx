@@ -140,7 +140,7 @@ export default function ProductRow({
           <button
             type="button"
             onClick={handleAdd}
-            className="text-xs font-semibold px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 active:scale-[0.98] transition-all"
+            className="h-10 px-5 text-sm font-semibold bg-primary text-primary-foreground rounded hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             Add
           </button>

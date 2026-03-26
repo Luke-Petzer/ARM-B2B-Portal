@@ -40,22 +40,22 @@ function TableHeader() {
     <div className="hidden md:grid items-center px-4 py-4 border-b border-gray-100 bg-gray-50/50"
       style={{ gridTemplateColumns: "60px 140px 1fr 120px 140px 100px" }}
     >
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Thumb
       </span>
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         SKU
       </span>
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Description
       </span>
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Unit Price
       </span>
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Quantity
       </span>
-      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider text-right">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">
         Action
       </span>
     </div>
@@ -64,6 +64,7 @@ function TableHeader() {
 
 export default function CatalogueShell({ products, categories }: CatalogueShellProps) {
   const [query, setQuery] = useState("");
+  const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const isSearching = query.trim().length > 0;
 
   /** Flat filtered list — used only when search is active */
@@ -111,6 +112,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
   }, [products, categories]);
 
   const scrollToCategory = (slug: string) => {
+    setActiveSlug(slug);
     document
       .getElementById(`cat-${slug}`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -147,7 +149,11 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
                   <button
                     key={group.slug}
                     onClick={() => scrollToCategory(group.slug)}
-                    className="flex-shrink-0 px-4 py-1.5 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                    className={`flex-shrink-0 ${
+                      group.slug === activeSlug
+                        ? "px-4 py-2 text-sm font-medium rounded-full border bg-primary text-primary-foreground border-primary transition-colors"
+                        : "px-4 py-2 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                    }`}
                   >
                     {group.name}
                   </button>

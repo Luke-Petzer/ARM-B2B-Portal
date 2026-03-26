@@ -63,7 +63,7 @@ export default function QuantityStepper({
       <button
         type="button"
         onClick={decrement}
-        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-slate-900 hover:bg-gray-50 transition-colors"
+        className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-slate-900 hover:bg-gray-50 transition-colors"
         aria-label="Decrease quantity"
       >
         −
@@ -82,13 +82,13 @@ export default function QuantityStepper({
             e.preventDefault();
           }
         }}
-        className="w-16 text-center text-[13px] font-medium border-x border-gray-100 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-14 text-center text-[13px] font-medium border-x border-gray-100 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         aria-label="Quantity"
       />
       <button
         type="button"
         onClick={increment}
-        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-slate-900 hover:bg-gray-50 transition-colors"
+        className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-slate-900 hover:bg-gray-50 transition-colors"
         aria-label="Increase quantity"
       >
         +
