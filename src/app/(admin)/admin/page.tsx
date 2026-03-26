@@ -63,7 +63,7 @@ function KpiCard({
         </span>
       </div>
       <p className="text-sm font-medium text-slate-500 mb-1">{label}</p>
-      <p className="text-3xl font-semibold text-slate-900 tracking-tight">{value}</p>
+      <p className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">{value}</p>
       <p className="text-xs text-slate-400 mt-2">{sub}</p>
     </div>
   );
@@ -135,7 +135,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   if (dateTo)   ordersQuery = ordersQuery.lte("created_at", `${dateTo}T23:59:59.999Z`);
 
   // RBAC filter — employees only see unassigned or their own orders
-  if (adminRole === "employee") {
+  if (adminRole === "employee" && !session.isSuperAdmin) {
     ordersQuery = ordersQuery.or(
       `assigned_to.is.null,assigned_to.eq.${currentAdminProfileId}`
     );
@@ -231,7 +231,7 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           label="Pending Orders"
           value={String(pendingCount)}

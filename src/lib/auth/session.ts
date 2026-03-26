@@ -14,6 +14,8 @@ export interface ActiveSession {
   isAdmin: boolean;
   /** Sub-role for admin users — null for buyers */
   adminRole: "manager" | "employee" | null;
+  /** True if the logged-in user's email matches ADMIN_SUPER_EMAIL */
+  isSuperAdmin: boolean;
   /** Raw JWT for forwarding to a custom Supabase client if needed */
   token: string | null;
 }
@@ -43,6 +45,7 @@ export async function getSession(
         isBuyer: true,
         isAdmin: false,
         adminRole: null,
+        isSuperAdmin: false,
         token: session.token,
       };
     }
@@ -65,6 +68,7 @@ export async function getSession(
       .single();
 
     if (profile) {
+      const superEmail = process.env.ADMIN_SUPER_EMAIL;
       return {
         profileId: profile.id,
         role: profile.role,
@@ -72,6 +76,7 @@ export async function getSession(
         isBuyer: false,
         isAdmin: profile.role === "admin",
         adminRole: profile.admin_role ?? "employee",
+        isSuperAdmin: !!superEmail && user.email === superEmail,
         token: null,
       };
     }
