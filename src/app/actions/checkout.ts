@@ -261,7 +261,7 @@ export async function checkoutAction(
 
   // 7. Validate order notes
   if (orderNotes.length > 1000) {
-    return { error: "Delivery instructions must be 1000 characters or fewer." };
+    return { error: "Order notes must be 1000 characters or fewer." };
   }
   const trimmedNotes = orderNotes.trim() || null;
 
