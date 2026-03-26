@@ -514,6 +514,8 @@ export async function uploadProductImageAction(
     .from("product-images")
     .getPublicUrl(filePath);
 
+  revalidatePath("/admin/products");
+
   return { url: data.publicUrl };
 }
 
