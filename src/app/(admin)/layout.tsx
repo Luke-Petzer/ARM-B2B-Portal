@@ -28,13 +28,13 @@ export default async function AdminLayout({
   const isSuperAdmin = session.isSuperAdmin ?? false;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-x-hidden font-inter">
+    <div className="h-[100dvh] overflow-hidden bg-slate-50 flex overflow-x-hidden font-inter">
       <AdminSidebar adminName={adminName} adminEmail={adminEmail} isSuperAdmin={isSuperAdmin} />
 
       {/* Main area */}
-      <div className="flex-1 min-w-0 md:ml-[250px] flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 md:ml-[250px] flex flex-col h-full">
         {/* Top header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-50">
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-50">
           <div className="flex items-center gap-4">
             <AdminMobileNav isSuperAdmin={isSuperAdmin} />
             <Image

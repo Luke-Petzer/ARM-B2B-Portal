@@ -55,7 +55,7 @@ export default function NavBar({ role }: NavBarProps) {
         </div>
       )}
 
-      <nav className="h-[64px] border-b border-gray-100 bg-white flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-50">
+      <nav className="h-[64px] border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-50">
         {/* Left — brand + nav links */}
         <div className="flex items-center gap-8">
           <Link href={"/dashboard" as Route} className="flex items-center">

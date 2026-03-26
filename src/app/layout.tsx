@@ -19,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-inter antialiased overflow-y-scroll`}>
+    <html lang="en" className="h-[100dvh] overflow-hidden">
+      <body className={`${inter.variable} font-inter antialiased h-[100dvh] overflow-hidden`}>
         {children}
       </body>
     </html>

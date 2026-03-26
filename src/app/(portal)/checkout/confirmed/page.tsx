@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle2, ArrowLeft, Download, Info } from "lucide-react";
 import CartClearer from "./CartClearer";
-import NavBar from "@/components/portal/NavBar";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -51,8 +50,6 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col bg-[#fafafa]">
-      <NavBar />
-
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center justify-center w-full px-4 md:px-8 py-12">
         {/* Cart clear on mount — client component */}

@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { getSession } from "@/lib/auth/session";
 import { redirect, notFound } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
-import NavBar from "@/components/portal/NavBar";
 import { AlertCircle } from "lucide-react";
 import PaymentForm from "./PaymentForm";
 
@@ -61,8 +60,6 @@ export default async function PaymentPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#fafafa] flex flex-col">
-      <NavBar />
-
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-12 pb-24">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-slate-900">

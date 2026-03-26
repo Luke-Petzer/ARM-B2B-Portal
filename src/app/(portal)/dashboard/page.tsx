@@ -2,7 +2,6 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
-import NavBar from "@/components/portal/NavBar";
 import CatalogueShell from "./CatalogueShell";
 
 // ---------------------------------------------------------------------------
@@ -89,9 +88,6 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <>
-      <NavBar role={session.role} />
-      <CatalogueShell products={rows} categories={categories} />
-    </>
+    <CatalogueShell products={rows} categories={categories} />
   );
 }

@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
-import NavBar from "@/components/portal/NavBar";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,10 +85,7 @@ export default async function StatementPage() {
   const totalOutstanding = orders.reduce((sum, o) => sum + o.total_amount, 0);
 
   return (
-    <>
-      <NavBar role={session.role} />
-
-      <div className="flex-1 overflow-y-auto bg-[#fcfcfc]">
+    <div className="flex-1 overflow-y-auto bg-[#fcfcfc]">
         <main className="max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-12 pb-24">
           {/* Page header */}
           <div className="mb-2">
@@ -176,6 +172,5 @@ export default async function StatementPage() {
           )}
         </main>
       </div>
-    </>
   );
 }

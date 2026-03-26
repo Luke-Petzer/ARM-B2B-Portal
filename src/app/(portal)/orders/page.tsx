@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
-import NavBar from "@/components/portal/NavBar";
 import OrderHistoryTable from "@/components/portal/OrderHistoryTable";
 
 export default async function OrdersPage() {
@@ -49,10 +48,7 @@ export default async function OrdersPage() {
   }));
 
   return (
-    <>
-      <NavBar role={session.role} />
-
-      <div className="flex-1 overflow-y-auto bg-[#fcfcfc]">
+    <div className="flex-1 overflow-y-auto bg-[#fcfcfc]">
         <main className="max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-12 pb-24">
           <div className="mb-8">
             <h1 className="text-2xl font-semibold text-slate-900">
@@ -63,6 +59,5 @@ export default async function OrdersPage() {
           <OrderHistoryTable orders={rows} />
         </main>
       </div>
-    </>
   );
 }
