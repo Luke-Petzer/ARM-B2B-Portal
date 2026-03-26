@@ -15,19 +15,21 @@ interface AuthCardProps {
 
 export function AuthCard({ title, description, children }: AuthCardProps) {
   return (
-    <div className="flex flex-col items-center gap-8 w-full max-w-sm">
-      {/* Fixed-size container reserves space before image loads, preventing layout shift */}
-      <div className="relative w-[280px] h-[80px] flex-shrink-0">
-        <Image
-          src="/logo.png"
-          alt="AR Steel Manufacturing"
-          fill
-          className="object-contain"
-          priority
-        />
-      </div>
-      <Card className="w-full shadow-2xl border-0">
-        <CardHeader className="space-y-1">
+    <div className="w-full max-w-sm">
+      <Card className="w-full shadow-2xl border-0 overflow-hidden">
+        {/* Logo sits on the same white background as logo.png — no visible border */}
+        <div className="flex justify-center items-center px-10 pt-10 pb-6 bg-white">
+          <div className="relative w-full h-[100px]">
+            <Image
+              src="/logo.png"
+              alt="AR Steel Manufacturing"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+        <CardHeader className="space-y-1 pt-2">
           <CardTitle className="text-2xl font-bold tracking-tight">
             {title}
           </CardTitle>
