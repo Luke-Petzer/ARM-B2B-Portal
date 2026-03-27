@@ -126,12 +126,8 @@ export async function updateAdminRoleAction(
   await requireAdmin();
 
   // Only the super admin may change roles
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const superEmail = process.env.ADMIN_SUPER_EMAIL;
-  if (!superEmail || user?.email !== superEmail) {
+  const session = await getSession();
+  if (!session?.isSuperAdmin) {
     return { error: "Unauthorised: only the super admin can update admin roles." };
   }
 
@@ -973,12 +969,8 @@ export async function updateTenantConfigAction(
   await requireAdmin();
 
   // Email lock: only the super admin (ADMIN_SUPER_EMAIL) can save settings
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const superEmail = process.env.ADMIN_SUPER_EMAIL;
-  if (!superEmail || user?.email !== superEmail) {
+  const sessionCheck = await getSession();
+  if (!sessionCheck?.isSuperAdmin) {
     return { error: "Unauthorised: only the super admin can update settings." };
   }
 

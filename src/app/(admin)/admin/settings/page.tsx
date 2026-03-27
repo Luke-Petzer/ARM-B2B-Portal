@@ -9,15 +9,13 @@ export default async function AdminSettingsPage() {
   const session = await getSession();
   if (!session?.isAdmin) redirect("/admin/login" as Route);
 
-  // Email lock — only the super admin may access this page
+  // Super admin gate — uses the same comma-split logic as getSession()
+  if (!session.isSuperAdmin) redirect("/admin" as Route);
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const superEmail = process.env.ADMIN_SUPER_EMAIL;
-  if (!superEmail || user?.email !== superEmail) {
-    redirect("/admin" as Route);
-  }
 
   const [{ data: config }, { data: adminUsers }] = await Promise.all([
     adminClient.from("tenant_config").select("*").eq("id", 1).single(),
