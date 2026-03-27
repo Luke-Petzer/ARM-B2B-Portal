@@ -47,6 +47,19 @@ export async function checkCreditStatus(profileId: string): Promise<CreditStatus
   }
 
   const orders = ordersResult.data;
+
+  // C5-03: Log profile fetch errors for observability. When the profile query
+  // fails, creditLimit falls through to null (unlimited), which is the
+  // least-disruptive failure mode in an admin-only context. The error is logged
+  // so the discrepancy is visible in application monitoring.
+  if (profileResult.error) {
+    console.error(
+      "[credit] failed to fetch profile for profileId:",
+      profileId,
+      profileResult.error.message
+    );
+  }
+
   const creditLimit =
     profileResult.data?.credit_limit != null
       ? Number(profileResult.data.credit_limit)

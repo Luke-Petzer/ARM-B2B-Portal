@@ -76,10 +76,10 @@ export default function CreditDrawer({
   const [isSending, startSendTransition] = useTransition();
   const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  const creditLimit = client.credit_limit ?? 0;
+  const creditLimit = client.credit_limit != null && client.credit_limit > 0 ? client.credit_limit : null;
   const creditUsed = unpaidOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const available = creditLimit - creditUsed;
-  const pct = creditLimit > 0 ? Math.min(100, (creditUsed / creditLimit) * 100) : 0;
+  const available = creditLimit != null ? creditLimit - creditUsed : null;
+  const pct = creditLimit != null ? Math.min(100, (creditUsed / creditLimit) * 100) : 0;
   const isCritical = pct >= 90;
 
   const allSelected = unpaidOrders.length > 0 && selectedIds.size === unpaidOrders.length;
@@ -201,8 +201,11 @@ export default function CreditDrawer({
                 </div>
                 <div>
                   <FieldLabel>Available Credit (R)</FieldLabel>
-                  <div className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 flex items-center select-none">
-                    {fmtCurrency(Math.max(0, available))}
+                  <div className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm flex items-center select-none">
+                    {available != null
+                      ? <span className="text-slate-500">{fmtCurrency(Math.max(0, available))}</span>
+                      : <span className="text-slate-400 italic">No limit set</span>
+                    }
                   </div>
                 </div>
               </div>
@@ -227,10 +230,13 @@ export default function CreditDrawer({
               </div>
               <div className="flex items-center justify-between mt-1.5">
                 <span className="text-[11px] text-slate-500">
-                  {fmtCurrency(creditUsed)} utilized
+                  {fmtCurrency(creditUsed)} outstanding
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  {fmtCurrency(Math.max(0, available))} available of {fmtCurrency(creditLimit)}
+                  {available != null
+                    ? `${fmtCurrency(Math.max(0, available))} available of ${fmtCurrency(creditLimit!)}`
+                    : "No credit limit configured"
+                  }
                 </span>
               </div>
             </div>

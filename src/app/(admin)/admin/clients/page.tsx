@@ -37,7 +37,8 @@ export default async function AdminClientsPage() {
       .from("orders")
       .select("id, reference_number, created_at, total_amount, profile_id")
       .in("profile_id", thirtyDayIds)
-      .eq("payment_status", "unpaid")
+      .in("payment_status", ["unpaid", "credit_approved"])
+      .not("confirmed_at", "is", null)
       .neq("status", "cancelled")
       .order("created_at", { ascending: false });
 
