@@ -1154,6 +1154,8 @@ export async function saveGlobalBannerAction(
 export async function markOrderSettledAction(
   orderId: string
 ): Promise<{ error?: string; success?: boolean }> {
+  await requireAdmin();
+
   const { error } = await adminClient
     .from("orders")
     .update({ payment_status: "paid" })
@@ -1172,6 +1174,8 @@ export async function markOrderSettledAction(
 export async function bulkMarkOrdersSettledAction(
   orderIds: string[]
 ): Promise<{ error?: string; success?: boolean }> {
+  await requireAdmin();
+
   if (!orderIds.length) return { error: "No orders selected." };
 
   const { error } = await adminClient
