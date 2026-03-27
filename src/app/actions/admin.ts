@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import ClientStatement from "@/emails/ClientStatement";
 import DispatchNotification from "@/emails/DispatchNotification";
+import OrderApprovedNotification from "@/emails/OrderApprovedNotification";
 import { renderDispatchSheetToBuffer } from "@/lib/pdf/invoice";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
@@ -263,6 +264,79 @@ async function sendDispatchEmail(orderId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// sendOrderApprovedEmail (internal — non-fatal, fire-and-forget)
+// ---------------------------------------------------------------------------
+
+async function sendOrderApprovedEmail(orderId: string): Promise<void> {
+  try {
+    // 1. Fetch order
+    const { data: order } = await adminClient
+      .from("orders")
+      .select("id, reference_number, confirmed_at, created_at, profile_id")
+      .eq("id", orderId)
+      .single();
+
+    if (!order) {
+      console.warn("[approved] order not found:", orderId);
+      return;
+    }
+
+    // 2. Fetch buyer profile (email + name)
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("email, contact_name")
+      .eq("id", order.profile_id)
+      .single();
+
+    if (!profile?.email) {
+      console.warn("[approved] buyer email not found for order:", orderId);
+      return;
+    }
+
+    // 3. Fetch tenant config for branding + from address
+    const { data: config } = await adminClient
+      .from("tenant_config")
+      .select("business_name, support_email, email_from_name")
+      .eq("id", 1)
+      .single();
+
+    const resendKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.RESEND_FROM_EMAIL;
+    if (!resendKey || !fromEmail) {
+      console.warn("[approved] RESEND_API_KEY or RESEND_FROM_EMAIL not set — skipping approval email");
+      return;
+    }
+
+    const supplierName = config?.business_name ?? "Your Supplier";
+    const fromAddress = config?.email_from_name
+      ? `${config.email_from_name} <${fromEmail}>`
+      : fromEmail;
+    const approvedAt = order.confirmed_at ?? order.created_at;
+
+    // 4. Send email
+    const resend = new Resend(resendKey);
+    const { error } = await resend.emails.send({
+      from: fromAddress,
+      to: [profile.email],
+      subject: `Order ${order.reference_number} Approved — Now with Dispatch`,
+      react: OrderApprovedNotification({
+        contactName: profile.contact_name ?? "Valued Customer",
+        orderReference: order.reference_number,
+        approvedAt,
+        supplierName,
+        supportEmail: config?.support_email ?? null,
+      }),
+    });
+
+    if (error) {
+      console.error("[approved] email send failed:", error.message);
+    }
+  } catch (err) {
+    console.error("[approved] sendOrderApprovedEmail error:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // approveOrderAction
 // ---------------------------------------------------------------------------
 
@@ -340,6 +414,11 @@ export async function approveOrderAction(
       console.error("[dispatch] unhandled error:", err)
     );
   }
+
+  // Notify the buyer on every approval (first approval or credit settlement)
+  sendOrderApprovedEmail(orderId).catch((err: unknown) =>
+    console.error("[approved] unhandled error:", err)
+  );
 }
 
 // ---------------------------------------------------------------------------
