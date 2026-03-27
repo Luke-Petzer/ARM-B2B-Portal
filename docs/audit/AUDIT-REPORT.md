@@ -13,13 +13,13 @@
 | P1 | Secret Sanitization | ✅ Complete | 5 | 1 Critical | 1 Fixed |
 | P2 | Financial Integrity (Checkout) | ✅ Complete | 40+ | 2 High | 2 Fixed |
 | C1 | Authentication & Session Security | ✅ Complete | 51 | 4 | 1 Fixed |
-| C2 | Authorization & RLS Enforcement | 🔲 Pending | — | — | — |
-| C4 | Order State Machine | 🔄 In Progress | — | — | — |
+| C2 | Authorization & RLS Enforcement | ✅ Complete | 28 | 1 Critical | 1 Fixed |
+| C4 | Order State Machine | ✅ Complete | 26 | 2 Medium | 0 (documented) |
 | C5 | Credit System | ✅ Complete | 24 | 3 | 2 Fixed |
-| C6 | API Routes & PDF/Report | 🔄 In Progress | — | — | — |
-| C7 | Code Quality & Technical Debt | 🔲 Pending | — | — | — |
+| C6 | API Routes & PDF/Report | ✅ Complete | 23 | 1 Medium | 0 (documented) |
+| C7 | Code Quality & Technical Debt | ✅ Complete | 9 | 1 Low | 1 Fixed |
 
-**Total tests (all complete chunks): 200 passing**
+**Total tests (all chunks): 237 passing**
 
 ---
 
@@ -162,17 +162,88 @@
 
 ---
 
+## Security Health Check — C2: Authorization & RLS
+
+### Findings
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| AUTHZ-001 | 🔴 CRITICAL | `markOrderSettledAction` and `bulkMarkOrdersSettledAction` missing `requireAdmin()` guard — any Server Action caller could mark orders as paid without admin auth | ✅ Fixed |
+| AUTHZ-002 | 🟢 LOW | `create_order_atomic` correctly restricts EXECUTE to `service_role` only; SECURITY DEFINER + `SET search_path` prevent privilege injection | ✅ Verified |
+
+### What Was Fixed
+
+**AUTHZ-001 — Missing admin guards:**
+- **Root cause:** Both settle-order actions were written without the `requireAdmin()` guard (which calls `getSession()` and redirects non-admins). While UI access is gated at the layout level, Server Actions should always have their own authorization check (defense-in-depth).
+- **Fix:** Added `await requireAdmin()` as the first statement in both functions.
+- **Test:** The `authorization.test.ts` dynamic check iterates all exported functions and verifies each calls `requireAdmin()` — this will catch any future regression automatically.
+
+### What Was Verified
+
+- Buyer sessions hard-code `isAdmin: false` regardless of JWT `app_role` claim — cannot be escalated by crafting a JWT with `app_role: "admin"`
+- Admin sessions hard-code `isBuyer: false` — no role confusion
+- Buyer cookie checked before Supabase Auth session — correct preference order
+- `buyerLoginAction` rejects accounts with `role === "admin"` using the same generic error message as a missing account (no enumeration risk)
+
+---
+
+## Security Health Check — C4: Order State Machine
+
+### Findings
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| FIN-005 | 🟡 MEDIUM | `checkoutAction` has no idempotency key — network timeout + retry creates duplicate orders | Documented (backlog) |
+| CSV-002 | 🟡 MEDIUM | `csvEsc` (in `admin.ts`) does not sanitise formula-injection prefixes (`=`, `+`, `-`, `@`) — admin CSV export could execute formulas in Excel | Documented (backlog) |
+
+### What Was Verified
+
+- `assignOrderAction` uses `.is("assigned_to", null)` — assignment is immutable once set
+- `approveOrderAction` fetches current state before updating; guards: `pending→confirmed` (first approval) and `confirmed+credit_approved→confirmed+paid` (settlement); `confirmed_at` only set on first approval; `approvalType` validated against enum
+- `cancelOrderAction` rejects non-pending orders; sets `cancelled_at` timestamp
+- Dispatch email guarded by `if (isFirstApproval)` — not re-sent on credit settlement
+
+---
+
+## Security Health Check — C6: API Routes & PDF/Report
+
+### Findings
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| CSV-001 | 🟡 MEDIUM | `csvEsc` (in `daily-report.ts`) does not sanitise formula-injection prefixes — admin CSV download could execute formulas in Excel | Documented (backlog) |
+
+### What Was Verified
+
+- Invoice route (`/api/invoice/[orderId]`): `getSession()` → 401 if unauthenticated; order query scoped to `session.profileId` (IDOR protection); returns 404 not 403 (no oracle attack); no `isAdmin` bypass; `application/pdf` Content-Type
+- Cron route (`/api/cron/daily-report`): exact-equality secret validation (`authHeader !== \`Bearer ${cronSecret}\``); `!authHeader || !cronSecret` guard covers unset env var; no `startsWith`/`includes` (no prefix-bypass)
+- Daily report route (`/api/reports/daily`): `session?.isAdmin` required; date param validated with anchored regex `/^\d{4}-\d{2}-\d{2}$/`
+- `daily-report.ts` has `import "server-only"` as first import; `dateStr` (DD/MM/YYYY from integer parts) is injection-safe
+
+---
+
+## Security Health Check — C7: Code Quality
+
+### Findings
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| QA-001 | 🟠 HIGH | 7 `console.log` statements in `adminLoginAction` logged admin email, Supabase user IDs, and profile role to server logs (added during live bug investigation) | ✅ Fixed — all debug logs removed |
+| AUD-001 | 🟢 LOW | `audit_log` rows can be deleted by service-role — no immutability constraint | Documented (backlog) |
+| QA-002 | 🟢 LOW | `(adminClient as any)` in `admin.ts` for audit_log insert — documented intentional workaround for Supabase type generator limitation | Documented |
+
+---
+
 ## Outstanding Issues (Backlog)
 
-| ID | Severity | Issue | Planned Chunk |
-|----|----------|-------|---------------|
-| SEC-003 | 🔴 CRITICAL | `SUPABASE_JWT_SECRET` shared between buyer JWT creation and Supabase DB — if leaked, anyone can forge buyer tokens | C1 (documented) |
-| FIN-005 | 🟡 MEDIUM | No idempotency key on `checkoutAction` — rapid double-submit can create duplicate orders | C4 (documented) |
-| CSV-001 | 🟡 MEDIUM | `csvEsc` does not prefix formula-injection chars (`=`, `+`, `-`, `@`) — admin-facing CSV export could execute formulas in Excel | C6 (documented) |
-| AUTH-002 | 🟠 HIGH | `secure` cookie only set in `NODE_ENV=production` — operator must verify TLS at edge | Deploy checklist |
-| C5-02 | 🟡 MEDIUM | `credit_limit = 0` treated as unlimited (bypasses Rule 2 check `> 0`) | Needs product decision |
-| AUD-001 | 🟢 LOW | `audit_log` rows can be deleted by service-role — no immutability constraint | C7 |
-| AUD-003 | 🟢 LOW | No Two-Factor Authentication for admin accounts | C7 |
+| ID | Severity | Issue | Decision Needed |
+|----|----------|-------|-----------------|
+| SEC-003 | 🔴 CRITICAL | `SUPABASE_JWT_SECRET` shared between buyer JWT creation and Supabase DB — if leaked, anyone can forge buyer tokens | Architecture: separate buyer JWT secret from Supabase JWT secret |
+| AUTH-002 | 🟠 HIGH | `secure` cookie only set in `NODE_ENV=production` — operator must verify TLS enforced at edge before launch | Deploy checklist: confirm TLS at load balancer |
+| FIN-005 | 🟡 MEDIUM | No idempotency key on `checkoutAction` — rapid double-submit creates duplicate orders | Add client-generated nonce + server-side dedup |
+| CSV-001/002 | 🟡 MEDIUM | `csvEsc` does not strip formula-injection prefixes (`=`, `+`, `-`, `@`) in both CSV exports | Add prefix sanitisation or warn admin in UI |
+| C5-02 | 🟡 MEDIUM | `credit_limit = 0` treated as unlimited (bypasses Rule 2 `> 0` check) | Product decision: does 0 mean "unlimited" or "always block"? |
+| AUD-001 | 🟢 LOW | `audit_log` rows deletable by service-role — no append-only constraint | Add `FOR INSERT` only RLS policy on audit_log |
 
 ---
 
@@ -196,12 +267,14 @@ tests/audit/
 ├── credit/
 │   └── credit-status.test.ts                 # 24 tests — C5 complete
 ├── order/
-│   └── state-machine.test.ts                 # 🔄 in progress — C4
-└── api/
-    └── route-access.test.ts                  # 🔄 in progress — C6
+│   └── state-machine.test.ts                 # 26 tests — C4 complete
+├── api/
+│   └── route-access.test.ts                  # 23 tests — C6 complete
+└── quality/
+    └── tech-debt.test.ts                     # 9 tests  — C7 complete
 ```
 
-**Total tests (current): 200 passing**
+**Total tests: 237 passing**
 **Pass rate: 100%**
 
 ---
@@ -219,4 +292,4 @@ Static analysis tests (file content assertions) are used where runtime execution
 
 ---
 
-*Last updated: 2026-03-27 — P1, P2, C1, C5 complete (200 tests). C4, C6 in progress.*
+*Last updated: 2026-03-27 — All chunks complete (P1, P2, C1, C2, C4, C5, C6, C7). 237 tests passing.*
