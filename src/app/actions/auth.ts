@@ -54,10 +54,21 @@ export async function buyerLoginAction(
     return { error: "Invalid account number." };
   }
 
-  // 2. Rate limit by IP
+  // 2. Rate limit by IP (with account-number fallback to prevent bucket collapse)
+  //
+  // SECURITY NOTE: When x-forwarded-for is absent (corporate NAT/VPN/privacy
+  // proxy strips the header), every user resolves to the literal string "unknown".
+  // A single user making 5 failed attempts would exhaust the shared
+  // "portal:login:unknown" bucket and lock out ALL other users whose IP is
+  // also unresolvable — a global denial-of-service via rate-limit collapse.
+  //
+  // Fix: scope the fallback key to the validated account number so that a
+  // lockout is confined to the specific account being targeted, not every user
+  // on the same privacy tool or corporate egress point.
   const headerStore = await headers();
-  const ip =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rawIp =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${accountNumber}`;
 
   const rateLimit = await checkLoginRateLimit(ip);
   if (!rateLimit.allowed) {
