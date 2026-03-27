@@ -15,7 +15,7 @@
 | C1 | Authentication & Session Security | ✅ Complete | 51 | 4 | 1 Fixed |
 | C2 | Authorization & RLS Enforcement | ✅ Complete | 28 | 1 Critical | 1 Fixed |
 | C4 | Order State Machine | ✅ Complete | 26 | 2 Medium | 0 (documented) |
-| C5 | Credit System | ✅ Complete | 24 | 3 | 2 Fixed |
+| C5 | Credit System | ✅ Complete | 24 | 3 | 3 Fixed |
 | C6 | API Routes & PDF/Report | ✅ Complete | 23 | 1 Medium | 0 (documented) |
 | C7 | Code Quality & Technical Debt | ✅ Complete | 9 | 1 Low | 1 Fixed |
 
@@ -135,7 +135,7 @@
 | ID | Severity | Finding | Status |
 |----|----------|---------|--------|
 | C5-01 | 🟠 HIGH | Credit display included pending orders (not yet confirmed by admin) — overstated the outstanding balance | ✅ Fixed — query now requires `confirmed_at IS NOT NULL` |
-| C5-02 | 🟡 MEDIUM | `credit_limit = 0` bypasses Rule 2 (guard is `creditLimit > 0`) — if 0 means "always block", the guard is wrong | ⚠️ Needs product decision from team |
+| C5-02 | 🟡 MEDIUM | `credit_limit = 0` bypasses Rule 2 (guard is `creditLimit > 0`) — 0 means "COD / no credit allowed" and must always block | ✅ Fixed — Rule 2 now: `creditLimit === 0 \|\| outstanding > creditLimit` |
 | C5-03 | 🟡 MEDIUM | Profile fetch error silently granted unlimited credit — no error logged | ✅ Fixed — `console.error` added |
 | C5-04 | 🟠 HIGH | Credit display showed R 0,00 available when `credit_limit` is null — null defaulted to 0, making available = 0 − outstanding = negative → clamped to 0 | ✅ Fixed — null now shown as "No limit set" |
 | C5-05 | 🟠 HIGH | Credit query only filtered `payment_status = "unpaid"` — missed `credit_approved` orders | ✅ Fixed — now uses `.in(["unpaid", "credit_approved"])` |
@@ -147,6 +147,12 @@
 - `CreditDrawer.tsx`: `creditLimit` is now `null` when not configured; UI shows "No limit set" / "No credit limit configured" instead of R 0,00
 - Consistent with `checkCreditStatus.ts` which uses the same `confirmed_at IS NOT NULL` pattern
 
+**C5-02 — COD / no-credit limit enforcement:**
+- **Product decision (2026-03-27):** `credit_limit = 0` means "Strictly COD / No Credit Allowed". Admins should never be able to approve credit for these accounts.
+- **Fix:** Rule 2 condition changed from `creditLimit != null && creditLimit > 0 && outstanding > creditLimit` to `creditLimit != null && (creditLimit === 0 || outstanding > creditLimit)`.
+- Three credit limit behaviours are now explicitly enforced: `null` = unlimited (skip check), `0` = always block regardless of balance, `> 0` = block if outstanding exceeds limit.
+- Tests R2-5, R2-6, R2-7 updated to expect `blocked: true` for `creditLimit = 0`.
+
 **Buyer protection confirmed:** `checkCreditStatus` is admin-only and is never called in the buyer checkout flow. Buyers cannot be blocked by credit status.
 
 ### Test Coverage — C5
@@ -154,7 +160,7 @@
 | Area | Tests |
 |------|-------|
 | Overdue rule (UTC month boundary, null guard) | 8 |
-| Limit exceeded (strict >, null=unlimited, 0-bypass documented) | 5 |
+| Limit exceeded (null=unlimited, 0=always block, >0=block if exceeded) | 5 |
 | Multiple rules (overdue takes precedence over limit) | 2 |
 | Error handling (orders fail=blocked, profile fail=unlimited+logged) | 4 |
 | Float precision (cent-level rounding) | 2 |
@@ -242,7 +248,7 @@
 | AUTH-002 | 🟠 HIGH | `secure` cookie only set in `NODE_ENV=production` — operator must verify TLS enforced at edge before launch | Deploy checklist: confirm TLS at load balancer |
 | FIN-005 | 🟡 MEDIUM | No idempotency key on `checkoutAction` — rapid double-submit creates duplicate orders | Add client-generated nonce + server-side dedup |
 | CSV-001/002 | 🟡 MEDIUM | `csvEsc` does not strip formula-injection prefixes (`=`, `+`, `-`, `@`) in both CSV exports | Add prefix sanitisation or warn admin in UI |
-| C5-02 | 🟡 MEDIUM | `credit_limit = 0` treated as unlimited (bypasses Rule 2 `> 0` check) | Product decision: does 0 mean "unlimited" or "always block"? |
+~~C5-02~~ | ~~🟡 MEDIUM~~ | ~~`credit_limit = 0` treated as unlimited~~ | ✅ Fixed 2026-03-27 |
 | AUD-001 | 🟢 LOW | `audit_log` rows deletable by service-role — no append-only constraint | Add `FOR INSERT` only RLS policy on audit_log |
 
 ---

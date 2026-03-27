@@ -333,10 +333,10 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
     expect(result.creditLimit).toBeNull();
   });
 
-  it("R2-5 [FINDING C5-02]: creditLimit = 0 → limit check SKIPPED (0 > 0 is false) → NOT blocked even with massive outstanding", async () => {
-    // AUDIT FINDING: credit_limit = 0 means the guard `creditLimit > 0` is false,
-    // so the limit check is entirely bypassed. A client with credit_limit = 0
-    // can accumulate unlimited outstanding balance. Intentional or bug?
+  it("R2-5 [C5-02 FIXED]: creditLimit = 0 means COD / no credit — ALWAYS blocked regardless of outstanding", async () => {
+    // Business rule (confirmed 2026-03-27):
+    //   credit_limit = 0 → strictly COD. The "Approve on Credit" button must
+    //   never be available for these accounts. Block even when outstanding = 0.
     mockSupabase({
       orders: [
         { id: "o1", total_amount: 50000, confirmed_at: thisMonthISO(), payment_status: "unpaid" },
@@ -346,15 +346,16 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
 
     const result = await checkCreditStatus("profile-abc");
 
-    // Documents current (potentially unintended) behaviour:
-    expect(result.blocked).toBe(false);
-    expect(result.reason).toBeNull();
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toBe("limit_exceeded");
     expect(result.creditLimit).toBe(0);
   });
 
-  it("R2-6 [FINDING C5-02]: creditLimit = -1 (negative) → limit check SKIPPED (negative > 0 is false)", async () => {
-    // Negative credit limits can appear from bad data entry. The guard `creditLimit > 0`
-    // silently skips the check, granting effectively unlimited credit.
+  it("R2-6: creditLimit = -1 (invalid DB state) → blocked because outstanding > negative limit", async () => {
+    // Negative credit limits are not reachable via the UI (input has min=0)
+    // but could appear from direct DB manipulation. Under the new condition
+    // `outstanding > creditLimit`, any positive outstanding exceeds a negative
+    // limit, so the account is blocked — the safe direction for invalid data.
     mockSupabase({
       orders: [
         { id: "o1", total_amount: 50000, confirmed_at: thisMonthISO(), payment_status: "unpaid" },
@@ -364,19 +365,22 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
 
     const result = await checkCreditStatus("profile-abc");
 
-    // Documents current behaviour — negative limit treated same as null
-    expect(result.blocked).toBe(false);
-    expect(result.reason).toBeNull();
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toBe("limit_exceeded");
     expect(result.creditLimit).toBe(-1);
   });
 
-  it("R2-7: outstanding = 0 with creditLimit = 0 → not blocked (nothing outstanding)", async () => {
+  it("R2-7: outstanding = 0 with creditLimit = 0 → BLOCKED (COD accounts always blocked, regardless of balance)", async () => {
+    // credit_limit = 0 means COD / no credit. The block is on the account type,
+    // not the balance — even a clean slate COD account must not get credit approval.
     mockSupabase({ orders: [], creditLimit: 0 });
 
     const result = await checkCreditStatus("profile-abc");
 
-    expect(result.blocked).toBe(false);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toBe("limit_exceeded");
     expect(result.outstanding).toBe(0);
+    expect(result.creditLimit).toBe(0);
   });
 });
 

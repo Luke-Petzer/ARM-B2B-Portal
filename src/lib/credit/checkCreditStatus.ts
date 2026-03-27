@@ -15,7 +15,10 @@ export interface CreditStatus {
  *
  * Blocked if:
  *  1. Any unpaid or credit_approved order with confirmed_at < first day of the current calendar month
- *  2. Sum of unpaid + credit_approved confirmed orders > client's credit_limit (when limit is set)
+ *  2. Credit limit rule (Rule 2):
+ *       credit_limit = null  → unlimited credit, skip check
+ *       credit_limit = 0     → COD / no credit allowed, ALWAYS blocked
+ *       credit_limit > 0     → blocked if outstanding > credit_limit
  *
  * This check is admin-side ONLY. The buyer portal never calls this.
  */
@@ -77,8 +80,11 @@ export async function checkCreditStatus(profileId: string): Promise<CreditStatus
     return { blocked: true, reason: "overdue", outstanding, creditLimit };
   }
 
-  // Rule 2: outstanding balance exceeds credit limit
-  if (creditLimit != null && creditLimit > 0 && outstanding > creditLimit) {
+  // Rule 2: credit limit enforcement
+  //   null → unlimited, skip check
+  //   0    → COD / no credit, always block regardless of outstanding balance
+  //   > 0  → block if outstanding exceeds the configured limit
+  if (creditLimit != null && (creditLimit === 0 || outstanding > creditLimit)) {
     return { blocked: true, reason: "limit_exceeded", outstanding, creditLimit };
   }
 
