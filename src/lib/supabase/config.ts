@@ -1,5 +1,6 @@
 // Shared Supabase configuration — imported by all client factory files.
 // Never import this directly in application code; use the typed client factories instead.
+import "server-only";
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

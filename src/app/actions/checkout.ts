@@ -10,6 +10,7 @@ import SupplierInvoice from "@/emails/SupplierInvoice";
 import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
+import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -39,11 +40,6 @@ const CheckoutSchema = z.array(CartItemSchema).min(1, "Cart is empty");
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Round to 2 decimal places — matches PostgreSQL ROUND(x, 2) for normal values. */
-function r2(n: number): number {
-  return parseFloat(n.toFixed(2));
-}
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -201,7 +197,7 @@ export async function checkoutAction(
   const productIds = items.map((i) => i.productId);
   const { data: productRows, error: productFetchError } = await adminClient
     .from("products")
-    .select("id, price, cost_price, pack_size, discount_type, discount_threshold, discount_value")
+    .select("id, price, cost_price, pack_size, discount_type, discount_threshold, discount_value, is_active")
     .in("id", productIds);
 
   if (productFetchError || !productRows) {
@@ -219,46 +215,30 @@ export async function checkoutAction(
     }
   }
 
-  // C-1 FIX: compute effective price using DB price as the base.
-  // item.unitPrice (client-supplied) is never used in any financial calculation.
-  function computeEffectiveUnitPrice(
-    dbPrice: number,
-    dbProduct: { discount_type: string | null; discount_threshold: number | null; discount_value: number | null },
-    quantity: number
-  ): number {
-    if (
-      !dbProduct.discount_type ||
-      dbProduct.discount_value == null ||
-      dbProduct.discount_threshold == null ||
-      quantity < dbProduct.discount_threshold
-    )
-      return dbPrice;
-    const val = Number(dbProduct.discount_value);
-    if (!isFinite(val)) return dbPrice;
-    if (dbProduct.discount_type === "percentage") {
-      return Math.max(0, parseFloat((dbPrice * (1 - val / 100)).toFixed(2)));
+  // Guard: reject inactive products — may have been deactivated after cart load.
+  for (const item of items) {
+    const dbProduct = productMap.get(item.productId)!;
+    if (dbProduct.is_active === false) {
+      return { error: `"${item.name}" is no longer available. Please remove it from your cart.` };
     }
-    // fixed
-    return Math.max(0, parseFloat((dbPrice - val).toFixed(2)));
   }
 
-  // 5. Compute per-item financials entirely from DB-verified values
-  const effectivePrices = items.map((item) => {
+  // 5. Compute per-item financials entirely from DB-verified values (C-1 FIX).
+  //    item.unitPrice (client-supplied) is intentionally discarded — pricing.ts
+  //    accepts only DB-sourced product fields.
+  const lineItems = items.map((item) => {
     const dbProduct = productMap.get(item.productId)!;
-    return computeEffectiveUnitPrice(Number(dbProduct.price), dbProduct, item.quantity);
+    return computeLineItem(dbProduct, item.quantity);
   });
-  const lineTotals = items.map((item, idx) =>
-    r2(effectivePrices[idx] * item.quantity)
-  );
-  const subtotal = r2(lineTotals.reduce((s, lt) => s + lt, 0));
-  const totalDiscountAmount = r2(
-    items.reduce((acc, item, idx) => {
-      const dbPrice = Number(productMap.get(item.productId)!.price);
-      return acc + r2((dbPrice - effectivePrices[idx]) * item.quantity);
-    }, 0)
-  );
-  const vatAmount = r2(subtotal * vatRate);
-  const totalAmount = r2(subtotal + vatAmount);
+
+  const lineTotals = lineItems.map((li) => li.lineTotal);
+  const discountSavings = items.map((item, idx) => {
+    const dbPrice = Number(productMap.get(item.productId)!.price);
+    return r2((dbPrice - lineItems[idx].effectiveUnitPrice) * item.quantity);
+  });
+
+  const { subtotal, totalDiscountAmount, vatAmount, totalAmount } =
+    computeOrderTotals(lineTotals, discountSavings, vatRate);
 
   // 6. Determine role-dependent fields
   const is30Day = session.role === "buyer_30_day";
@@ -271,25 +251,20 @@ export async function checkoutAction(
   }
   const trimmedNotes = orderNotes.trim() || null;
 
-  // 8. Build line-item payloads — unit_price is now the DB-verified base price (C-1 fix).
+  // 8. Build line-item payloads — unit_price is the DB-verified base price (C-1 fix).
   //    cost_price and pack_size are snapshotted from DB for daily report integrity.
   const orderItemPayloads = items.map((item, idx) => {
     const dbProduct = productMap.get(item.productId)!;
-    const dbPrice = Number(dbProduct.price);
-    const discountSaving = dbPrice - effectivePrices[idx];
-    const discountPct = dbPrice > 0
-      ? parseFloat(((discountSaving / dbPrice) * 100).toFixed(4))
-      : 0;
     return {
       product_id: item.productId,
       sku: item.sku,
       product_name: item.name,
-      unit_price: dbPrice,                      // verified server-side price
+      unit_price: Number(dbProduct.price),      // verified server-side price
       cost_price: dbProduct.cost_price ?? null, // snapshot for margin reporting
       pack_size: dbProduct.pack_size,           // snapshot for display integrity
       quantity: item.quantity,
-      discount_pct: discountPct,
-      line_total: lineTotals[idx],
+      discount_pct: lineItems[idx].discountPct,
+      line_total: lineItems[idx].lineTotal,
       variant_info: item.variantInfo ?? null,
     };
   });
