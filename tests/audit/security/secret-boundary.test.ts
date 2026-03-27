@@ -6,12 +6,17 @@ describe("Secret Boundary: config.ts", () => {
   const configPath = path.resolve(__dirname, "../../../src/lib/supabase/config.ts");
   const configSource = fs.readFileSync(configPath, "utf-8");
 
-  it("must import server-only to prevent service role key from entering the client bundle", () => {
-    expect(configSource).toMatch(/import\s+["']server-only["']/);
+  // config.ts intentionally does NOT have server-only — it only exports NEXT_PUBLIC_ vars
+  // which are safe for browser/middleware. Adding server-only here broke the build
+  // (Turbopack error) because browser.ts and middleware.ts both import from config.ts.
+  it("must NOT export supabaseServiceRoleKey — service role key belongs in admin.ts only", () => {
+    expect(configSource).not.toContain("supabaseServiceRoleKey");
+    expect(configSource).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 
-  it("exports supabaseServiceRoleKey (presence is fine with server-only guard in place)", () => {
-    expect(configSource).toContain("supabaseServiceRoleKey");
+  it("only exports NEXT_PUBLIC_ vars (safe for client bundle)", () => {
+    expect(configSource).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(configSource).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   });
 });
 
@@ -40,7 +45,13 @@ describe("Secret Boundary: admin.ts", () => {
   const adminPath = path.resolve(__dirname, "../../../src/lib/supabase/admin.ts");
   const adminSource = fs.readFileSync(adminPath, "utf-8");
 
-  it("admin.ts already has server-only guard", () => {
+  it("admin.ts has server-only guard", () => {
     expect(adminSource).toMatch(/import\s+["']server-only["']/);
+  });
+
+  it("admin.ts owns SUPABASE_SERVICE_ROLE_KEY directly (not re-exported from config.ts)", () => {
+    // The service role key must be read inside a server-only module.
+    // It was moved from config.ts to here to avoid breaking browser.ts / middleware imports.
+    expect(adminSource).toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 });

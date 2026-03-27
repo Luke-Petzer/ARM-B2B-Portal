@@ -7,7 +7,9 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { supabaseUrl, supabaseServiceRoleKey } from "./config";
+import { supabaseUrl } from "./config";
+
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseServiceRoleKey) {
   throw new Error("Missing required env var: SUPABASE_SERVICE_ROLE_KEY");

@@ -34,17 +34,16 @@
 
 ### What Was Fixed
 
-**SEC-001 — `config.ts` server-only guard:**
-- **Root cause:** `config.ts` exported the service role key but had no `server-only` import. Next.js would include this in the client bundle if any client component transitively imported it.
-- **Fix:** Added `import "server-only"` as the first import in `config.ts`.
+**SEC-001 — Service role key moved out of shared `config.ts`:**
+- **Root cause:** `config.ts` exported `supabaseServiceRoleKey` alongside the two `NEXT_PUBLIC_` vars. Because `browser.ts` and middleware import from `config.ts`, adding `server-only` there broke the build (Vercel Turbopack error: "server-only cannot be imported from a Client Component").
+- **Fix (revised):** Removed `supabaseServiceRoleKey` from `config.ts` entirely. `admin.ts` (which already has `import "server-only"`) now reads `process.env.SUPABASE_SERVICE_ROLE_KEY` directly. `config.ts` is now intentionally NOT server-only — it only exports `NEXT_PUBLIC_` vars that are safe for browser/middleware use.
 - **Test:** `tests/audit/security/secret-boundary.test.ts` — 5 tests, all passing.
 
 ### Inventory of Secret Usage
 
 | Secret | File | Import Pattern | Server-Only Guard |
 |--------|------|----------------|-------------------|
-| `SUPABASE_SERVICE_ROLE_KEY` | `src/lib/supabase/config.ts` | Exported as `supabaseServiceRoleKey` | ✅ `server-only` (added by audit) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `src/lib/supabase/admin.ts` | Imported from config | ✅ `server-only` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `src/lib/supabase/admin.ts` | `process.env.SUPABASE_SERVICE_ROLE_KEY` (direct, not re-exported) | ✅ `server-only` |
 | `SUPABASE_SERVICE_ROLE_KEY` | `src/app/actions/checkout.ts:337` | `process.env.SUPABASE_SERVICE_ROLE_KEY!` (broadcast) | ✅ `"use server"` directive |
 | `SUPABASE_JWT_SECRET` | `src/lib/auth/buyer.ts` | `process.env.SUPABASE_JWT_SECRET` | ✅ `server-only` |
 | `RESEND_API_KEY` | `src/app/actions/checkout.ts` | `process.env.RESEND_API_KEY` | ✅ `"use server"` directive |
