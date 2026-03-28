@@ -25,6 +25,16 @@ export default async function PortalLayout({
     console.error("[portal/layout] global_settings fetch failed:", bannerError.message);
   }
 
+  let businessName: string | null = null;
+  if (session?.profileId) {
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("business_name")
+      .eq("id", session.profileId)
+      .single();
+    businessName = profile?.business_name ?? null;
+  }
+
   const showBanner =
     settings?.is_banner_active === true &&
     typeof settings.banner_message === "string" &&
@@ -35,7 +45,7 @@ export default async function PortalLayout({
       {/* Banner is flex-shrink-0 so it never compresses the content area */}
       {showBanner && <GlobalBanner message={settings!.banner_message!} />}
       {/* NavBar lives here — outside any overflow container, always visible */}
-      <NavBar role={session?.role as AppRole | undefined} />
+      <NavBar role={session?.role as AppRole | undefined} businessName={businessName} />
       {/* Content area fills remaining viewport height exactly */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {children}

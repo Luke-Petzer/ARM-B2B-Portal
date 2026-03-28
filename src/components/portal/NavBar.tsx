@@ -17,9 +17,10 @@ const BASE_NAV_LINKS: { href: Route; label: string }[] = [
 
 interface NavBarProps {
   role?: AppRole;
+  businessName?: string | null;
 }
 
-export default function NavBar({ role }: NavBarProps) {
+export default function NavBar({ role, businessName }: NavBarProps) {
   const NAV_LINKS = [
     ...BASE_NAV_LINKS,
     ...(role === "buyer_30_day"
@@ -97,6 +98,13 @@ export default function NavBar({ role }: NavBarProps) {
               </span>
             )}
           </Link>
+
+          {/* Business name — desktop only */}
+          {businessName && (
+            <span className="hidden md:block text-xs font-medium text-gray-500 max-w-[180px] truncate">
+              {businessName}
+            </span>
+          )}
 
           {/* Desktop logout — hidden on mobile */}
           <button
