@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Package, Tag, ChevronDown } from "lucide-react";
+import { Package, Tag } from "lucide-react";
 import { useCartStore } from "@/lib/cart/store";
 import QuantityStepper from "./QuantityStepper";
 
@@ -100,20 +100,20 @@ export default function ProductRow({
           {/* SKU — grid col 2 */}
           <span className="text-sm font-medium text-slate-900">{sku}</span>
           {/* Description — grid col 3 */}
-          <button
-            type="button"
-            onClick={() => setIsExpanded((v) => !v)}
-            aria-expanded={isExpanded}
-            aria-controls={`desc-panel-${productId}`}
-            className="flex items-center gap-1 text-left w-full min-w-0 md:pr-8 cursor-pointer group/desc"
-          >
-            <span className="text-sm text-gray-500 truncate flex-1 min-w-0">
+          <div className="flex flex-col gap-1 min-w-0 md:pr-4">
+            <span className="text-sm text-gray-500 truncate">
               {description ?? name}
             </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 flex-shrink-0 text-gray-400 transition-transform duration-200 group-hover/desc:text-slate-600 ${isExpanded ? "rotate-180" : ""}`}
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsExpanded((v) => !v)}
+              aria-expanded={isExpanded}
+              aria-controls={`desc-panel-${productId}`}
+              className="w-fit text-xs font-medium px-3 py-1 border border-gray-300 rounded text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            >
+              {isExpanded ? "Hide Details" : "More Information"}
+            </button>
+          </div>
           {/* Price — grid col 4 (wrapper keeps price + badge as one grid child) */}
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-slate-900">
