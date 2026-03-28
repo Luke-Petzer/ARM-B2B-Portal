@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-[100dvh] overflow-hidden">
+    <html lang="en" className="h-[100dvh] overflow-hidden" style={{ colorScheme: "light" }}>
       <body className={`${inter.variable} font-inter antialiased h-[100dvh] overflow-hidden`}>
         {children}
       </body>
