@@ -11,9 +11,13 @@ const ZAR = new Intl.NumberFormat("en-ZA", {
   minimumFractionDigits: 2,
 });
 
+const VAT_RATE = 0.15;
+
 export default function CartSidebar() {
   const { items, removeItem, subtotal } = useCartStore();
   const sub = subtotal();
+  const vat = parseFloat((sub * VAT_RATE).toFixed(2));
+  const total = parseFloat((sub + vat).toFixed(2));
 
   return (
     <aside className="hidden lg:flex w-[400px] border-l border-gray-100 bg-white flex-col flex-shrink-0 z-40">
@@ -98,13 +102,17 @@ export default function CartSidebar() {
       <div className="p-6 border-t border-gray-100 bg-gray-50/30 flex-shrink-0">
         <div className="space-y-2 mb-6">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-500">Subtotal (Excl. VAT)</span>
             <span className="text-slate-900 font-medium">{ZAR.format(sub)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">VAT (15%)</span>
+            <span className="text-slate-900 font-medium">{ZAR.format(vat)}</span>
           </div>
           <div className="flex justify-between pt-2 border-t border-gray-100">
             <span className="text-base font-semibold text-slate-900">Total</span>
             <span className="text-base font-bold text-slate-900">
-              {ZAR.format(sub)}
+              {ZAR.format(total)}
             </span>
           </div>
         </div>
