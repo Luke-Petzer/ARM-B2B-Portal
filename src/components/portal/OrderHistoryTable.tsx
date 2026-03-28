@@ -44,6 +44,8 @@ interface OrderRow {
   id: string;
   reference_number: string;
   created_at: string;
+  subtotal: number;
+  vat_amount: number;
   total_amount: number;
   status: string;
   item_count: number;
@@ -289,6 +291,24 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                       </div>
                     </div>
                   ))}
+
+                  {/* VAT totals footer */}
+                  <div className="px-4 py-3 bg-slate-50 border-t border-gray-100">
+                    <div className="ml-auto max-w-xs space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Subtotal (Excl. VAT)</span>
+                        <span className="font-medium text-slate-900">{ZAR.format(order.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">VAT (15%)</span>
+                        <span className="font-medium text-slate-900">{ZAR.format(order.vat_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-1 border-t border-gray-200">
+                        <span className="font-semibold text-slate-900">Total</span>
+                        <span className="font-bold text-slate-900">{ZAR.format(order.total_amount)}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

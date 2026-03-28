@@ -10,7 +10,7 @@ export default async function OrdersPage() {
   const { data: orders, error } = await adminClient
     .from("orders")
     .select(
-      `id, reference_number, created_at, total_amount, status,
+      `id, reference_number, created_at, subtotal, vat_amount, total_amount, status,
        order_items ( id, sku, product_name, unit_price, quantity, line_total )`
     )
     .eq("profile_id", session.profileId)
@@ -34,6 +34,8 @@ export default async function OrdersPage() {
     id: o.id,
     reference_number: o.reference_number,
     created_at: o.created_at,
+    subtotal: Number(o.subtotal),
+    vat_amount: Number(o.vat_amount),
     total_amount: Number(o.total_amount),
     status: o.status,
     item_count: ((o.order_items as RawItem[]) ?? []).length,
