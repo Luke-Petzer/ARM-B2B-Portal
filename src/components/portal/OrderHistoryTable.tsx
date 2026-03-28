@@ -258,8 +258,8 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
 
             {/* Accordion — line items */}
             {isExpanded && (
-              <div className="bg-gray-50 px-3 md:px-6 py-4 md:py-6">
-                <div className="bg-white border border-gray-100 rounded shadow-sm divide-y divide-gray-50">
+              <div className="bg-blue-50/30 px-3 md:px-6 py-4 md:py-6">
+                <div className="bg-white border border-blue-100 rounded shadow-sm divide-y divide-gray-50">
                   {/* Desktop column headers — hidden on mobile */}
                   <div className="hidden md:grid grid-cols-[1fr_2fr_1fr_80px_100px] px-4 py-2.5 bg-gray-50/30">
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">SKU</span>
