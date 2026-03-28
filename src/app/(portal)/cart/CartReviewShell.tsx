@@ -194,7 +194,7 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
 
             <div className="space-y-4 mb-8">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Subtotal</span>
+                <span className="text-sm text-gray-500">Subtotal (Excl. VAT)</span>
                 <span className="text-sm font-medium text-slate-900">
                   {ZAR.format(sub)}
                 </span>
