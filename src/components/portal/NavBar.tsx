@@ -11,7 +11,8 @@ import type { Route } from "next";
 import type { AppRole } from "@/lib/supabase/types";
 
 const BASE_NAV_LINKS: { href: Route; label: string }[] = [
-  { href: "/dashboard", label: "Catalogue" },
+  { href: "/dashboard", label: "Order Sheet" },
+  { href: "/catalogue", label: "Catalogue" },
   { href: "/orders", label: "Order History" },
 ];
 
