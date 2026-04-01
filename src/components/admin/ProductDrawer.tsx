@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useTransition, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { UploadCloud, Loader2, X, ImageOff } from "lucide-react";
 import {
   Sheet,
@@ -95,7 +94,6 @@ export default function ProductDrawer({
 }: ProductDrawerProps) {
   const isEdit = Boolean(product);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [discountType, setDiscountType] = useState<string>(
     product?.discount_type ?? "none"
@@ -154,7 +152,6 @@ export default function ProductDrawer({
       const url = await uploadProductImage(file);
       setPreviewUrl(url);
       setUploadedImageUrl(url);
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image upload failed.");
     } finally {

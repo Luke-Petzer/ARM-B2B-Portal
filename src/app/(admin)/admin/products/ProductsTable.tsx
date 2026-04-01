@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Package, Search } from "lucide-react";
 import ProductDrawer, {
@@ -30,6 +30,8 @@ export default function ProductsTable({
 }: ProductsTableProps) {
   const router = useRouter();
   const [products, setProducts] = useState<ProductRow[]>(initialProducts);
+  // Sync local state when server delivers fresh data after router.refresh()
+  useEffect(() => { setProducts(initialProducts); }, [initialProducts]);
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
