@@ -39,3 +39,6 @@ next-env.d.ts
 
 # git worktrees
 .worktrees/
+
+# loose PDF files at root (use public/ instead)
+/*.pdf
