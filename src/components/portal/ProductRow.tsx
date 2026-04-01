@@ -84,7 +84,7 @@ export default function ProductRow({
             )}
           </div>
           {primaryImageUrl && (
-            <div className="absolute bottom-full left-0 mb-2 z-50 w-72 h-72 rounded-lg overflow-hidden shadow-xl border border-slate-200 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+            <div className="absolute bottom-full left-0 mb-2 z-50 w-72 h-72 rounded-lg overflow-hidden shadow-xl border border-slate-200 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 bg-white backdrop-blur-sm">
               <Image
                 src={primaryImageUrl}
                 alt={name}
