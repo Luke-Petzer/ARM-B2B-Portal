@@ -89,7 +89,7 @@ export default function ProductRow({
                 src={primaryImageUrl}
                 alt={name}
                 fill
-                className="object-cover"
+                className="object-contain"
               />
             </div>
           )}
