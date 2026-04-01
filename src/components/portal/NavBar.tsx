@@ -52,8 +52,8 @@ export default function NavBar({ role, businessName }: NavBarProps) {
             <Image
               src="/logo.png"
               alt="AR Steel Manufacturing"
-              height={48}
-              width={200}
+              height={44}
+              width={97}
               priority
               className="object-contain"
             />
