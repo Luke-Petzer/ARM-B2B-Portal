@@ -283,7 +283,7 @@ function ExpandedRow({
 
   return (
     <tr>
-      <td colSpan={6} className="p-0">
+      <td colSpan={5} className="p-0">
         <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -566,15 +566,12 @@ export default function OrderLedger({
             <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider px-6 py-3">
               Total Value
             </th>
-            <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider px-6 py-3">
-              POS Status
-            </th>
           </tr>
         </thead>
         <tbody>
           {orders.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-16 text-center text-sm text-slate-400">
+              <td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-400">
                 No orders found.
               </td>
             </tr>
@@ -609,9 +606,6 @@ export default function OrderLedger({
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 font-medium text-right">
                       {ZAR.format(Number(order.total_amount))}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <StatusBadge status={order.status} />
                     </td>
                   </tr>
                   {isExpanded && (
