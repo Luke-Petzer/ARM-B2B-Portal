@@ -291,22 +291,6 @@ function ExpandedRow({
               Line Items — {order.reference_number}
             </h3>
             <div className="flex items-center gap-3">
-              {/* Assignment badge / Assign to Me */}
-              {assigneeName ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
-                  Assigned: {assigneeName}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleAssign}
-                  disabled={isAssigning}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  {isAssigning ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                  Assign to Me
-                </button>
-              )}
               <span className="text-xs text-slate-400">
                 {order.items.length} item{order.items.length !== 1 ? "s" : ""}
               </span>
