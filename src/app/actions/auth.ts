@@ -5,10 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
-import {
-  BUYER_SESSION_COOKIE,
-  buyerSessionCookieOptions,
-} from "@/lib/auth/buyer";
+import { BUYER_SESSION_COOKIE } from "@/lib/auth/buyer";
 import { checkLoginRateLimit } from "@/lib/rate-limit";
 
 // ── Shared error response type ─────────────────────────────────────────────
@@ -108,7 +105,7 @@ export async function signUpAction(
   });
 
   if (error || !data.user) {
-    return { error: error?.message ?? "Registration failed. Please try again." };
+    return { error: "Registration failed. Please try again." };
   }
 
   redirect("/dashboard");
