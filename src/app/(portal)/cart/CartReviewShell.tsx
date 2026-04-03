@@ -6,6 +6,7 @@ import { Info, Loader2, Trash2 } from "lucide-react";
 import { useCartStore, getEffectiveUnitPrice } from "@/lib/cart/store";
 import QuantityStepper from "@/components/portal/QuantityStepper";
 import { checkoutAction } from "@/app/actions/checkout";
+import AddressGateForm from "@/components/auth/AddressGateForm";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -30,6 +31,7 @@ interface CartReviewShellProps {
 export default function CartReviewShell({ reorderItems }: CartReviewShellProps) {
   const { items, updateQuantity, removeItem, subtotal, addItem, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
+  const [addressRequired, setAddressRequired] = useState(false);
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
@@ -59,6 +61,10 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
     setError(null);
     startTransition(async () => {
       const result = await checkoutAction(items, orderNotes);
+      if (result?.error === "address_required") {
+        setAddressRequired(true);
+        return;
+      }
       if (result?.error) setError(result.error);
       // On success: checkoutAction calls redirect() — component unmounts
     });
@@ -249,6 +255,11 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
                 className="w-full min-h-[80px] resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
               />
             </div>
+
+            {/* Address gate */}
+            {addressRequired && (
+              <AddressGateForm onSaved={() => setAddressRequired(false)} />
+            )}
 
             {/* Error message */}
             {error && (
