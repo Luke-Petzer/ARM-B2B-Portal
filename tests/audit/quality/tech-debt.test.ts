@@ -93,10 +93,11 @@ describe("C7: Error message security (non-disclosure)", () => {
     expect(distinctMessages.size).toBe(1);
   });
 
-  it("buyerLoginAction uses a generic 'Account not found or inactive.' for all failure modes", () => {
-    // Same principle: don't differentiate between 'account doesn't exist',
-    // 'account is inactive', or 'this is an admin account'.
-    expect(authActionSource).toMatch(/Account not found or inactive\./);
+  it("loginAction uses a generic 'Invalid email or password.' for all failure modes", () => {
+    // buyerLoginAction was replaced with loginAction (email+password via Supabase Auth).
+    // The new action uses a generic error message that doesn't differentiate
+    // between wrong password, unregistered email, or disabled accounts.
+    expect(authActionSource).toMatch(/Invalid email or password\./);
   });
 });
 
