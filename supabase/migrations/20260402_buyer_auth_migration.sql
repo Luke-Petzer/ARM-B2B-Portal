@@ -72,7 +72,8 @@ BEGIN
     NEW.email,
     NULL,  -- no account number for Supabase Auth buyers
     true
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
 END;
