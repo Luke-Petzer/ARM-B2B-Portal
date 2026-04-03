@@ -76,9 +76,10 @@ describe("Authorization: session.ts — privilege isolation", () => {
     expect(sessionSource).toMatch(/isAdmin:\s*false/);
   });
 
-  it("admin session returns isBuyer: false (hardcoded — prevents role confusion)", () => {
-    // Symmetrically, admin sessions return isBuyer: false.
-    expect(sessionSource).toMatch(/isBuyer:\s*false/);
+  it("admin session derives isBuyer from role (profile.role !== 'admin')", () => {
+    // isBuyer is derived from the profile role, not hardcoded.
+    // For admin roles this evaluates to false; for buyer roles it evaluates to true.
+    expect(sessionSource).toMatch(/isBuyer:\s*profile\.role\s*!==\s*["']admin["']/);
   });
 
   it("buyer cookie is checked BEFORE Supabase Auth (buyer-first preference order)", () => {
