@@ -170,7 +170,8 @@ export async function checkoutAction(
   const session = await getSession();
   if (!session) redirect("/login" as Route);
 
-  // Check buyer has at least one shipping address
+  // Check buyer has at least one shipping address. Admins are exempt — only
+  // buyers are required to provide a delivery address before placing an order.
   if (session.isBuyer) {
     const { data: addresses } = await adminClient
       .from("addresses")
