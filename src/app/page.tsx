@@ -29,7 +29,7 @@ export default async function LandingPage() {
           </div>
           <nav className="flex items-center gap-6">
             <Link
-              href="/catalogue"
+              href={"/catalogue" as any}
               className="text-sm text-white/70 hover:text-white transition-colors"
             >
               Catalogue
@@ -75,7 +75,7 @@ export default async function LandingPage() {
         </div>
         <p className="text-sm text-white/40">
           Browse our{" "}
-          <Link href="/catalogue" className="underline hover:text-white/70">
+          <Link href={"/catalogue" as any} className="underline hover:text-white/70">
             product catalogue
           </Link>{" "}
           — no account required.
