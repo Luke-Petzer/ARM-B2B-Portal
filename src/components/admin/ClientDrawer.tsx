@@ -140,7 +140,7 @@ export default function ClientDrawer({
       >
         <SheetHeader className="h-16 px-6 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
           <SheetTitle className="text-lg font-semibold text-slate-900">
-            {isEdit ? "Edit Client" : "Register New Client"}
+            {isEdit ? "Edit Client" : "Invite New Client"}
           </SheetTitle>
         </SheetHeader>
 
@@ -341,7 +341,7 @@ export default function ClientDrawer({
                   <div>
                     <p className="text-xs font-medium text-blue-900">Login credentials</p>
                     <p className="text-[11px] text-blue-700 mt-1 leading-relaxed">
-                      Buyers log in with their account number. No password is required — share the account number securely with the client.
+                      Buyers log in with their email address and password via the self-service portal.
                     </p>
                   </div>
                 </div>
