@@ -120,7 +120,7 @@ export default function LandingPage() {
           navState === 'hidden' ? '-translate-y-[calc(100%+1rem)]' : '',
         ].join(' ')}
       >
-        <Link href="/" className="flex-shrink-0">
+        <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
           <Image
             src="/logo.png"
             alt="AR Steel Manufacturing"
@@ -134,19 +134,19 @@ export default function LandingPage() {
         <div className="flex items-center gap-5 md:gap-8">
           <a
             href="#services"
-            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block"
+            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
           >
             Services
           </a>
           <a
             href="#footer"
-            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block"
+            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
           >
             Contact Us
           </a>
           <Link
             href="/login"
-            className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 rounded-full transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 cursor-pointer"
+            className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 rounded-full transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
           >
             Login
           </Link>
@@ -193,13 +193,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <a
               href="#services"
-              className="bg-white text-[#050d14] px-8 py-3 font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm"
+              className="bg-white text-[#050d14] px-8 py-3 font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Our Services
             </a>
             <Link
               href="/login"
-              className="border border-white/25 text-white px-8 py-3 font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm"
+              className="border border-white/25 text-white px-8 py-3 font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Login
             </Link>
@@ -207,7 +207,7 @@ export default function LandingPage() {
         </div>
 
         <div className="absolute bottom-10 left-8 md:left-16 lg:left-24 z-10">
-          <ArrowDown className="w-5 h-5 text-white/25 animate-bounce" />
+          <ArrowDown className="w-5 h-5 text-white/25 animate-bounce motion-reduce:animate-none" />
         </div>
       </section>
 
@@ -258,7 +258,7 @@ export default function LandingPage() {
                   {/* Image half */}
                   <div className="w-full lg:w-7/12 overflow-hidden">
                     <div className="aspect-[4/3] overflow-hidden relative">
-                      <div className="absolute inset-0 z-10 bg-[#050d14]/55 group-hover:bg-transparent transition-all duration-700" />
+                      <div className="absolute inset-0 z-10 bg-[#050d14]/[0.55] group-hover:bg-transparent transition-all duration-700" />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={dept.image}
@@ -290,7 +290,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center bg-white text-[#050d14] px-10 py-4 font-bebas text-xl tracking-widest hover:bg-white/90 transition-colors duration-200 rounded-sm"
+            className="inline-flex items-center bg-white text-[#050d14] px-10 py-4 font-bebas text-xl tracking-widest hover:bg-white/90 transition-colors duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#050d14] focus-visible:outline-offset-2"
           >
             Login to Order
           </Link>
@@ -326,13 +326,13 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#services"
-                    className="hover:text-white transition-colors duration-200 cursor-pointer"
+                    className="hover:text-white transition-colors duration-200 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
                   >
                     Our Services
                   </a>
                 </li>
                 <li>
-                  <Link href="/login" className="hover:text-white transition-colors duration-200">
+                  <Link href="/login" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
                     Login
                   </Link>
                 </li>
@@ -370,20 +370,12 @@ export default function LandingPage() {
               © 2026 AR Steel Manufacturing. All rights reserved.
             </p>
             <div className="flex items-center gap-5">
-              <a
-                href="#"
-                aria-label="LinkedIn"
-                className="text-white/25 hover:text-white transition-colors duration-200 cursor-pointer"
-              >
+              <span aria-label="LinkedIn" className="text-white/25">
                 <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                aria-label="Instagram"
-                className="text-white/25 hover:text-white transition-colors duration-200 cursor-pointer"
-              >
+              </span>
+              <span aria-label="Instagram" className="text-white/25">
                 <Instagram className="w-5 h-5" />
-              </a>
+              </span>
             </div>
           </div>
         </div>
