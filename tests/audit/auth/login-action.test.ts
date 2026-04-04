@@ -23,11 +23,25 @@ vi.mock("next/headers", () => ({
 import { loginAction } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 
-function mockSupabaseWithSignIn(result: { error: { message: string } | null }) {
+function mockSupabaseWithSignIn(
+  result: { error: { message: string } | null },
+  userId: string | null = null
+) {
   (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
     auth: {
       signInWithPassword: vi.fn().mockResolvedValue(result),
+      getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId } : null } }),
     },
+  });
+}
+
+import { adminClient } from "@/lib/supabase/admin";
+
+function mockAdminClientWithRole(userId: string, role: string) {
+  (adminClient.from as ReturnType<typeof vi.fn>).mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { role } }),
   });
 }
 
@@ -61,10 +75,17 @@ describe("loginAction", () => {
     expect(result?.error).toBe("Invalid email or password.");
   });
 
-  it("redirects on successful login", async () => {
-    mockSupabaseWithSignIn({ error: null });
+  it("redirects buyer to /dashboard on successful login", async () => {
+    mockSupabaseWithSignIn({ error: null }, "buyer-user-id");
+    mockAdminClientWithRole("buyer-user-id", "buyer_default");
     const fd = makeFormData("test@example.com", "correctpassword");
-    // redirect() throws REDIRECT error in tests (mocked in setup.ts)
     await expect(loginAction(fd)).rejects.toThrow("REDIRECT:/dashboard");
+  });
+
+  it("redirects admin to /admin on successful login", async () => {
+    mockSupabaseWithSignIn({ error: null }, "admin-user-id");
+    mockAdminClientWithRole("admin-user-id", "admin");
+    const fd = makeFormData("admin@example.com", "correctpassword");
+    await expect(loginAction(fd)).rejects.toThrow("REDIRECT:/admin");
   });
 });

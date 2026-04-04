@@ -70,6 +70,20 @@ export async function loginAction(
     return { error: "Invalid email or password." };
   }
 
+  // Check role to route admins to the admin portal, buyers to the dashboard
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("role")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (profile?.role === "admin") {
+      redirect("/admin");
+    }
+  }
+
   redirect("/dashboard");
 }
 
