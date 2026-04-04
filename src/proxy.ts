@@ -98,7 +98,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
 
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Unauthenticated users see the landing page
+    return response;
   }
 
   return response;
