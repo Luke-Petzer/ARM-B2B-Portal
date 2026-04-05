@@ -18,9 +18,7 @@ const schema = z.object({
   business_name: z.string().optional(),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the Terms and Conditions." }),
-  }),
+  terms: z.literal(true, { message: "You must accept the Terms and Conditions." }),
 });
 
 type FormValues = z.infer<typeof schema>;
