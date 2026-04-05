@@ -7,6 +7,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
@@ -17,6 +18,9 @@ const schema = z.object({
   business_name: z.string().optional(),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  terms: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the Terms and Conditions." }),
+  }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -28,6 +32,7 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -105,6 +110,31 @@ export default function RegisterPage() {
             <p className="text-sm text-red-500">{errors.password.message}</p>
           )}
         </div>
+
+        <div className="flex items-start gap-3 pt-1">
+          <Checkbox
+            id="terms"
+            onCheckedChange={(checked) =>
+              setValue("terms", checked === true ? true : (undefined as unknown as true), {
+                shouldValidate: true,
+              })
+            }
+          />
+          <Label htmlFor="terms" className="text-sm font-normal leading-snug cursor-pointer">
+            I accept the{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              Terms and Conditions
+            </Link>{" "}
+            and Privacy Policy.
+          </Label>
+        </div>
+        {errors.terms && (
+          <p className="text-sm text-red-500">{errors.terms.message}</p>
+        )}
 
         {serverError && (
           <p className="text-sm text-red-500 text-center">{serverError}</p>
