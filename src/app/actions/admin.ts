@@ -609,6 +609,11 @@ export async function uploadProductImageAction(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { error: "No file provided." };
 
+  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return { error: "Only JPEG, PNG, and WebP images are allowed." };
+  }
+
   // Sanitise filename and make it unique
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -648,8 +653,8 @@ export async function createProductAction(
 ): Promise<{ error: string } | { id: string }> {
   await requireAdmin();
 
-  const sku = (formData.get("sku") as string).trim();
-  const name = (formData.get("name") as string).trim();
+  const sku = ((formData.get("sku") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
   const description = (formData.get("description") as string | null)?.trim() ?? null;
   const details = (formData.get("details") as string | null)?.trim() ?? null;
   const priceRaw = parseFloat(formData.get("price") as string);
@@ -749,8 +754,8 @@ export async function updateProductAction(
   const id = formData.get("id") as string | null;
   if (!id) return { error: "Missing product ID." };
 
-  const sku = (formData.get("sku") as string).trim();
-  const name = (formData.get("name") as string).trim();
+  const sku = ((formData.get("sku") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
   const description = (formData.get("description") as string | null)?.trim() ?? null;
   const details = (formData.get("details") as string | null)?.trim() ?? null;
   const priceRaw = parseFloat(formData.get("price") as string);
@@ -965,12 +970,16 @@ export async function updateClientAction(
   const id = formData.get("id") as string | null;
   if (!id) return { error: "Missing client ID." };
 
-  const accountNumber = (formData.get("account_number") as string).trim();
-  const businessName = (formData.get("business_name") as string).trim();
-  const contactName = (formData.get("contact_name") as string).trim();
+  const accountNumber = ((formData.get("account_number") as string) ?? "").trim();
+  const businessName = ((formData.get("business_name") as string) ?? "").trim();
+  const contactName = ((formData.get("contact_name") as string) ?? "").trim();
   const email = (formData.get("email") as string | null)?.trim() || null;
   const phone = (formData.get("phone") as string | null)?.trim() || null;
-  const role = formData.get("role") as "buyer_default" | "buyer_30_day";
+  const rawRole = formData.get("role") as string | null;
+  const role: "buyer_default" | "buyer_30_day" =
+    rawRole === "buyer_default" || rawRole === "buyer_30_day"
+      ? rawRole
+      : "buyer_default";
   const vatNumber = (formData.get("vat_number") as string | null)?.trim() || null;
   const creditLimit = parseFloat(formData.get("credit_limit") as string) || null;
   const rawAvailableCredit = formData.get("available_credit") as string | null;
