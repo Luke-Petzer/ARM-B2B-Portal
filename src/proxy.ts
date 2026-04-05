@@ -7,7 +7,14 @@ import { BUYER_SESSION_COOKIE } from "@/lib/auth/buyer";
 
 const PUBLIC_ROUTES = ["/login", "/admin/login"];
 const ADMIN_PREFIX = "/admin";
-const PORTAL_PREFIX = "/dashboard";
+const PORTAL_PREFIXES = [
+  "/cart",
+  "/catalogue",
+  "/checkout",
+  "/dashboard",
+  "/order-sheet",
+  "/orders",
+];
 
 // ── JWT verification (inline — no DB calls in proxy) ──────────────────────
 
@@ -66,8 +73,8 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // ── Portal routes (/dashboard/*) ────────────────────────────────────────
-  if (pathname.startsWith(PORTAL_PREFIX)) {
+  // ── Portal routes (/cart, /catalogue, /checkout, /dashboard, /order-sheet, /orders) ──
+  if (PORTAL_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     // Check buyer session first (no DB call — just JWT verification)
     const buyerSession = await getBuyerSessionFromCookie(request);
     if (buyerSession) return response;

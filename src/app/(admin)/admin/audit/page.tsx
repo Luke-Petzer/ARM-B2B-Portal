@@ -1,4 +1,7 @@
 import { adminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 const PAGE_SIZE = 50;
 
@@ -26,6 +29,9 @@ function ActionBadge({ action }: { action: "INSERT" | "UPDATE" | "DELETE" }) {
 }
 
 export default async function AdminAuditPage({ searchParams }: PageProps) {
+  const session = await getSession();
+  if (!session?.isAdmin) redirect("/admin/login" as Route);
+
   const { page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
 
