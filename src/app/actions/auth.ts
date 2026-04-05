@@ -52,9 +52,10 @@ export async function loginAction(
 
   const { email, password } = parsed.data;
 
-  // Rate limit by IP
   const headerStore = await headers();
-  const rawIp = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const rawIp =
+    headerStore.get("x-real-ip")?.trim() ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
   const rateLimit = await checkLoginRateLimit(ip);
   if (!rateLimit.allowed) {
@@ -105,6 +106,18 @@ export async function signUpAction(
 
   const { contact_name, business_name, email, password } = parsed.data;
 
+  const headerStore = await headers();
+  const rawIp =
+    headerStore.get("x-real-ip")?.trim() ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
+  const rateLimit = await checkLoginRateLimit(`signup:${ip}`);
+  if (!rateLimit.allowed) {
+    return {
+      error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
+    };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -136,6 +149,18 @@ export async function forgotPasswordAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
+  }
+
+  const headerStore = await headers();
+  const rawIp =
+    headerStore.get("x-real-ip")?.trim() ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${parsed.data.email}`;
+  const rateLimit = await checkLoginRateLimit(`forgot:${ip}`);
+  if (!rateLimit.allowed) {
+    return {
+      error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
+    };
   }
 
   const supabase = await createClient();
@@ -192,6 +217,19 @@ export async function adminLoginAction(
   }
 
   const { email, password } = parsed.data;
+
+  const headerStore = await headers();
+  const rawIp =
+    headerStore.get("x-real-ip")?.trim() ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
+  const rateLimit = await checkLoginRateLimit(`admin:${ip}`);
+  if (!rateLimit.allowed) {
+    return {
+      error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
+    };
+  }
+
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
