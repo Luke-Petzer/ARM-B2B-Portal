@@ -22,7 +22,7 @@ const departments = [
     subtitle: 'Laser Cutting · CNC Bending · Custom Metalwork',
     description:
       'From concept to finished component — we cut, bend and fabricate structural steel to exact tolerances. Our CNC laser cutting and press braking capabilities handle complex geometries for bespoke industrial applications.',
-    image: 'https://images.unsplash.com/photo-1565439387858-29759c5d315f?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-1.webp',
     imageAlt: 'Laser cutting steel in a manufacturing facility',
   },
   {
@@ -31,7 +31,7 @@ const departments = [
     subtitle: 'Razor Wire · Wall Spikes · Palisade Systems',
     description:
       'Comprehensive boundary protection solutions including razor wire concertinas, galvanised wall spikes and palisade systems. Engineered for maximum deterrence and long-term outdoor durability.',
-    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-2.webp',
     imageAlt: 'Industrial perimeter security fencing',
   },
   {
@@ -40,7 +40,7 @@ const departments = [
     subtitle: 'Hinges · Catches · Lock Boxes · Security Bolts',
     description:
       'A complete range of gate fittings — from heavy-duty hinges and gate catches to lock boxes, barrel bolts and drop bolts. Precision-machined hardware built for high-frequency use and reliable access control.',
-    image: 'https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-3.webp',
     imageAlt: 'Industrial gate hardware and fittings',
   },
   {
@@ -49,7 +49,7 @@ const departments = [
     subtitle: 'Wheels · Tracks · Guides · Automation Ready',
     description:
       'Full structural kits for heavy-duty sliding gates. Machined tracking profiles, high-load-bearing wheels, guide systems and rigid chassis frames — everything needed for smooth, reliable gate operation.',
-    image: 'https://images.unsplash.com/photo-1513828742140-ccaa28f3eda0?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-4.webp',
     imageAlt: 'Industrial sliding gate system components',
   },
   {
@@ -58,7 +58,7 @@ const departments = [
     subtitle: 'Flashings · Truss Hangers · Bracing · Nail Plates',
     description:
       'Essential structural hardware for commercial roofing and general construction. Galvanised flashings, truss hangers, bracing straps, hoop iron and nail plates — built to last in demanding site conditions.',
-    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-5.webp',
     imageAlt: 'Roofing and construction steel hardware',
   },
   {
@@ -67,7 +67,7 @@ const departments = [
     subtitle: 'Round & Square Poles · Washing Line Poles',
     description:
       'Round and square carport poles in multiple diameters and thicknesses, plus washing line poles. Galvanised and treated for outdoor durability — supplied in bulk packs for trade and construction.',
-    image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-6.webp',
     imageAlt: 'Steel carport and outdoor structure poles',
   },
   {
@@ -76,7 +76,7 @@ const departments = [
     subtitle: 'Argo Welding Rods · Cutting Disks · Tools',
     description:
       'Professional-grade workshop essentials under the Argo range — welding rods in multiple weights, cutting disks in all standard sizes, and gate wheel kits. Reliable consumables for fabricators and contractors.',
-    image: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?q=80&w=1800&auto=format&fit=crop',
+    image: '/image-7.webp',
     imageAlt: 'Welding and workshop tools and supplies',
   },
 ]
@@ -263,7 +263,7 @@ export default function LandingPage() {
                       <img
                         src={dept.image}
                         alt={dept.imageAlt}
-                        className="w-full h-full object-cover grayscale contrast-110 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
+                        className="object-cover w-full h-full grayscale-[50%] brightness-75 contrast-125 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
                         loading="lazy"
                       />
                     </div>
