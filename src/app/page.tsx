@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Bebas_Neue } from 'next/font/google'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -13,7 +13,7 @@ const bebasNeue = Bebas_Neue({
   variable: '--font-bebas',
 })
 
-type NavState = 'top' | 'pill' | 'hidden'
+type NavState = 'top' | 'pill'
 
 const departments = [
   {
@@ -83,41 +83,28 @@ const departments = [
 
 export default function LandingPage() {
   const [navState, setNavState] = useState<NavState>('top')
-  const lastScrollY = useRef(0)
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      const scrollingDown = currentScrollY > lastScrollY.current
-
-      if (currentScrollY < 80) {
-        setNavState('top')
-      } else if (scrollingDown && currentScrollY > 280) {
-        setNavState('hidden')
-      } else {
-        setNavState('pill')
-      }
-
-      lastScrollY.current = currentScrollY
+      setNavState(window.scrollY < 80 ? 'top' : 'pill')
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const isPill = navState === 'pill' || navState === 'hidden'
+  const isPill = navState === 'pill'
 
   return (
     <div className={`${bebasNeue.variable} min-h-screen bg-[#050d14] text-white`}>
 
       {/* ── NAVBAR ── */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <nav
         className={[
-          'fixed z-50 flex items-center justify-between transition-all duration-300 ease-in-out',
+          'pointer-events-auto flex items-center justify-between transition-all duration-300 ease-in-out',
           isPill
-            ? 'left-1/2 -translate-x-1/2 top-4 w-[min(680px,calc(100vw-2rem))] px-6 py-3 rounded-full bg-[#0a1929] border border-white/10 backdrop-blur-md shadow-2xl'
-            : 'left-0 right-0 top-0 w-full px-8 md:px-16 lg:px-24 py-8',
-          navState === 'hidden' ? '-translate-y-[calc(100%+1rem)]' : '',
+            ? 'mt-4 w-[min(680px,calc(100vw-2rem))] px-6 py-3 rounded-full bg-[#0a1929] border border-white/10 backdrop-blur-md shadow-2xl'
+            : 'mt-0 w-full max-w-[1400px] px-8 md:px-16 lg:px-24 py-8',
         ].join(' ')}
       >
         <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
@@ -126,7 +113,7 @@ export default function LandingPage() {
             alt="AR Steel Manufacturing"
             height={isPill ? 32 : 40}
             width={isPill ? 80 : 100}
-            className="object-contain transition-all duration-300"
+            className="object-contain transition-all duration-300 mix-blend-screen"
             priority
           />
         </Link>
@@ -152,6 +139,7 @@ export default function LandingPage() {
           </Link>
         </div>
       </nav>
+      </div>
 
       {/* ── HERO ── */}
       <section
@@ -309,7 +297,7 @@ export default function LandingPage() {
                 alt="AR Steel Manufacturing"
                 height={40}
                 width={100}
-                className="object-contain mb-5"
+                className="object-contain mb-5 mix-blend-screen"
               />
               <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
                 Precision-manufactured steel products and hardware for the
