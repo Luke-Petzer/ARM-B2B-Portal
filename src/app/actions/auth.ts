@@ -68,6 +68,9 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    if (error.code === "email_not_confirmed") {
+      return { error: "Please verify your email address before signing in." };
+    }
     return { error: "Invalid email or password." };
   }
 
@@ -123,6 +126,7 @@ export async function signUpAction(
     email,
     password,
     options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/verify-success`,
       data: {
         role: "buyer_default",
         contact_name,
@@ -135,7 +139,8 @@ export async function signUpAction(
     return { error: "Registration failed. Please try again." };
   }
 
-  redirect("/dashboard");
+  // Don't redirect — user must verify email before logging in
+  return { error: null };
 }
 
 // ── Forgot password ────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { signUpAction } from "@/app/actions/auth";
 
 const schema = z.object({
@@ -26,6 +26,7 @@ type FormValues = z.infer<typeof schema>;
 export default function RegisterPage() {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
   const {
     register,
@@ -43,8 +44,32 @@ export default function RegisterPage() {
       formData.append("email", data.email);
       formData.append("password", data.password);
       const result = await signUpAction(formData);
-      if (result?.error) setServerError(result.error);
+      if (result?.error) {
+        setServerError(result.error);
+      } else {
+        setSent(true);
+      }
     });
+  }
+
+  if (sent) {
+    return (
+      <AuthCard title="Check Your Email" description="">
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <CheckCircle2 className="h-10 w-10 text-green-500" />
+          <p className="text-sm text-muted-foreground">
+            Account created. Please check your email to verify your account
+            before logging in.
+          </p>
+          <Link
+            href="/login"
+            className="text-sm font-medium underline underline-offset-4"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </AuthCard>
+    );
   }
 
   return (
