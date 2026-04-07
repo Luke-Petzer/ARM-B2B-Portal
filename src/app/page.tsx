@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { Bebas_Neue } from 'next/font/google'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -12,8 +11,6 @@ const bebasNeue = Bebas_Neue({
   display: 'swap',
   variable: '--font-bebas',
 })
-
-type NavState = 'top' | 'pill'
 
 const departments = [
   {
@@ -82,38 +79,18 @@ const departments = [
 ]
 
 export default function LandingPage() {
-  const [navState, setNavState] = useState<NavState>('top')
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setNavState(window.scrollY < 80 ? 'top' : 'pill')
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const isPill = navState === 'pill'
-
   return (
     <div className={`${bebasNeue.variable} min-h-screen bg-[#050d14] text-white`}>
 
       {/* ── NAVBAR ── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-      <nav
-        className={[
-          'pointer-events-auto flex items-center justify-between transition-all duration-300 ease-in-out',
-          isPill
-            ? 'mt-4 w-[min(680px,calc(100vw-2rem))] px-6 py-3 rounded-full bg-[#0a1929] border border-white/10 backdrop-blur-md shadow-2xl'
-            : 'mt-0 w-full max-w-[1400px] px-8 md:px-16 lg:px-24 py-8',
-        ].join(' ')}
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 py-6">
         <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
           <Image
             src="/logo-dark.png"
             alt="AR Steel Manufacturing"
-            height={isPill ? 48 : 60}
-            width={isPill ? 120 : 150}
-            className="object-contain transition-all duration-300 border border-[#1a3a6e] rounded"
+            height={60}
+            width={150}
+            className="object-contain border border-[#1a3a6e] rounded"
             priority
           />
         </Link>
@@ -139,7 +116,6 @@ export default function LandingPage() {
           </Link>
         </div>
       </nav>
-      </div>
 
       {/* ── HERO ── */}
       <section
