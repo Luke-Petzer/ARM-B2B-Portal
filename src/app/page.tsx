@@ -108,16 +108,14 @@ export default function LandingPage() {
         ].join(' ')}
       >
         <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
-          <div className="bg-[#1b3560] border border-white/10 rounded-sm px-3 py-1.5 transition-all duration-300">
-            <Image
-              src="/logo-dark.png"
-              alt="AR Steel Manufacturing"
-              height={isPill ? 32 : 40}
-              width={isPill ? 80 : 100}
-              className="object-contain transition-all duration-300"
-              priority
-            />
-          </div>
+          <Image
+            src="/logo-dark.png"
+            alt="AR Steel Manufacturing"
+            height={isPill ? 48 : 60}
+            width={isPill ? 120 : 150}
+            className="object-contain transition-all duration-300"
+            priority
+          />
         </Link>
 
         <div className="flex items-center gap-5 md:gap-8">
@@ -294,15 +292,13 @@ export default function LandingPage() {
 
             {/* Brand */}
             <div>
-              <div className="bg-[#1b3560] border border-white/10 rounded-sm px-3 py-1.5 inline-block mb-5">
-                <Image
-                  src="/logo-dark.png"
-                  alt="AR Steel Manufacturing"
-                  height={40}
-                  width={100}
-                  className="object-contain"
-                />
-              </div>
+              <Image
+                src="/logo-dark.png"
+                alt="AR Steel Manufacturing"
+                height={60}
+                width={150}
+                className="object-contain mb-5"
+              />
               <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
                 Precision-manufactured steel products and hardware for the
                 construction, security and fabrication industries.
