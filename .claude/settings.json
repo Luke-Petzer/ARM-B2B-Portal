@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat /Users/lukepetzer/LP-Web-Studio/Clients/Rasheed-B2B/Codebase/rasheed-ordering-portal/src/lib/auth*.ts)"
+      "Bash(cat /Users/lukepetzer/LP-Web-Studio/Clients/Rasheed-B2B/Codebase/rasheed-ordering-portal/src/lib/auth*.ts)",
+      "Bash(python3 /Users/lukepetzer/.claude/skills/ui-ux-pro-max/scripts/search.py \"mobile touch animation dark fixed navbar\" --domain ux)",
+      "Bash(python3 /Users/lukepetzer/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark industrial brutalist tech-noir\" --domain style)"
     ]
   }
 }
