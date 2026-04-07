@@ -90,8 +90,8 @@ export default function LandingPage() {
             <Image
               src="/logo-dark.png"
               alt="AR Steel Manufacturing"
-              height={60}
-              width={150}
+              height={42}
+              width={105}
               className="object-contain border border-[#1a3a6e] rounded"
               priority
             />
@@ -112,7 +112,7 @@ export default function LandingPage() {
             </a>
             <Link
               href="/login"
-              className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 rounded-sm transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+              className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 min-h-[44px] rounded-sm transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Login
             </Link>
@@ -139,7 +139,7 @@ export default function LandingPage() {
           }}
         />
 
-        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 pt-40 pb-24">
+        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 pt-28 md:pt-40 pb-24">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-2 h-2 bg-white/50 rotate-45 flex-shrink-0" />
             <span className="text-white/40 font-inter text-xs tracking-[0.3em] uppercase">
@@ -160,13 +160,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <a
               href="#services"
-              className="bg-white text-[#050d14] px-8 py-3 font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+              className="bg-white text-[#050d14] px-8 py-3 min-h-[44px] font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Our Services
             </a>
             <Link
               href="/login"
-              className="border border-white/25 text-white px-8 py-3 font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+              className="border border-white/25 text-white px-8 py-3 min-h-[44px] font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Login
             </Link>
@@ -185,7 +185,7 @@ export default function LandingPage() {
           return (
             <div
               key={dept.number}
-              className={`py-24 md:py-32 ${isEven ? 'bg-[#0a1929]' : 'bg-[#050d14]'}`}
+              className={`py-14 md:py-32 ${isEven ? 'bg-[#0a1929]' : 'bg-[#050d14]'}`}
             >
               <div className="max-w-[1400px] mx-auto px-6 md:px-16 lg:px-24">
                 <div
@@ -202,7 +202,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.55, ease: 'easeOut' }}
                   >
                     <span
-                      className="font-bebas text-[120px] md:text-[160px] leading-none text-white/[0.04] select-none absolute -top-6 -left-2 pointer-events-none"
+                      className="font-bebas text-[80px] md:text-[120px] lg:text-[160px] leading-none text-white/[0.04] select-none absolute -top-6 -left-2 pointer-events-none"
                       aria-hidden="true"
                     >
                       {dept.number}
@@ -283,7 +283,7 @@ export default function LandingPage() {
                 alt="AR Steel Manufacturing"
                 height={60}
                 width={150}
-                className="object-contain mb-5"
+                className="object-contain mb-5 max-w-[120px]"
               />
               <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
                 Precision-manufactured steel products and hardware for the
