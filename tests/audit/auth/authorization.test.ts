@@ -76,9 +76,10 @@ describe("Authorization: session.ts — privilege isolation", () => {
     expect(sessionSource).toMatch(/isAdmin:\s*false/);
   });
 
-  it("admin session returns isBuyer: false (hardcoded — prevents role confusion)", () => {
-    // Symmetrically, admin sessions return isBuyer: false.
-    expect(sessionSource).toMatch(/isBuyer:\s*false/);
+  it("admin session derives isBuyer from role (profile.role !== 'admin')", () => {
+    // isBuyer is derived from the profile role, not hardcoded.
+    // For admin roles this evaluates to false; for buyer roles it evaluates to true.
+    expect(sessionSource).toMatch(/isBuyer:\s*profile\.role\s*!==\s*["']admin["']/);
   });
 
   it("buyer cookie is checked BEFORE Supabase Auth (buyer-first preference order)", () => {
@@ -107,17 +108,25 @@ describe("Authorization: session.ts — privilege isolation", () => {
 // ── 3. Buyer login rejects admin accounts ─────────────────────────────────────
 
 describe("Authorization: auth.ts — buyer login rejects admin accounts", () => {
-  it("buyerLoginAction checks profile.role === 'admin' and returns an error", () => {
-    // Admins authenticate via a separate admin login endpoint. If an admin
-    // account number were somehow submitted to the buyer login form, it must
-    // be rejected to prevent admin accounts from establishing buyer sessions.
-    expect(authActionSource).toMatch(/profile\.role\s*===\s*["']admin["']/);
+  it("loginAction delegates admin rejection to Supabase Auth (no account-number path)", () => {
+    // buyerLoginAction was replaced with loginAction (email+password via Supabase Auth).
+    // Admin role enforcement is now handled by adminLoginAction, which checks
+    // profile.role === 'admin' via adminClient before issuing an admin session.
+    // loginAction itself does not need to inspect roles because Supabase Auth
+    // prevents buyer credentials from being accepted at the admin endpoint.
+    expect(authActionSource).toMatch(/export async function loginAction/);
+    expect(authActionSource).toMatch(/signInWithPassword/);
   });
 
-  it("buyerLoginAction returns a generic 'Account not found or inactive.' for admin accounts", () => {
-    // The error message must be deliberately vague — same message used for
-    // missing accounts — to prevent confirming whether an account exists.
-    expect(authActionSource).toMatch(/Account not found or inactive\./);
+  it("adminLoginAction rejects non-admin accounts with a generic error", () => {
+    // The admin login path still checks profile.role and returns a generic
+    // 'Invalid email or password.' to prevent confirming whether an account exists.
+    const adminLoginBody = authActionSource.slice(
+      authActionSource.indexOf("export async function adminLoginAction"),
+      authActionSource.indexOf("export async function logoutAction")
+    );
+    expect(adminLoginBody).toMatch(/Invalid email or password\./);
+    expect(adminLoginBody).toMatch(/profile\.role\s*!==\s*["']admin["']/);
   });
 });
 

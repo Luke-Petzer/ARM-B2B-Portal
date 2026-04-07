@@ -170,6 +170,21 @@ export async function checkoutAction(
   const session = await getSession();
   if (!session) redirect("/login" as Route);
 
+  // Check buyer has at least one shipping address. Admins are exempt — only
+  // buyers are required to provide a delivery address before placing an order.
+  if (session.isBuyer) {
+    const { data: addresses } = await adminClient
+      .from("addresses")
+      .select("id")
+      .eq("profile_id", session.profileId)
+      .eq("type", "shipping")
+      .limit(1);
+
+    if (!addresses || addresses.length === 0) {
+      return { error: "address_required" };
+    }
+  }
+
   // 2. Validate cart payload (passed from client Zustand store)
   const parsed = CheckoutSchema.safeParse(rawItems);
   if (!parsed.success) {

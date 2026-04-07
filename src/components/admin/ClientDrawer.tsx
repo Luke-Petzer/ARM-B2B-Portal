@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createClientAction, updateClientAction } from "@/app/actions/admin";
+import { inviteClientAction, updateClientAction } from "@/app/actions/admin";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,7 +121,7 @@ export default function ClientDrawer({
     startTransition(async () => {
       const result = isEdit
         ? await updateClientAction(formData)
-        : await createClientAction(formData);
+        : await inviteClientAction(formData);
 
       if (result && "error" in result) {
         setError(result.error);
@@ -140,7 +140,7 @@ export default function ClientDrawer({
       >
         <SheetHeader className="h-16 px-6 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
           <SheetTitle className="text-lg font-semibold text-slate-900">
-            {isEdit ? "Edit Client" : "Register New Client"}
+            {isEdit ? "Edit Client" : "Invite New Client"}
           </SheetTitle>
         </SheetHeader>
 
@@ -155,156 +155,198 @@ export default function ClientDrawer({
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-            {/* Account info */}
-            <div className="space-y-4">
-              <InputField
-                name="account_number"
-                label="Account Number"
-                defaultValue={client?.account_number}
-                placeholder="e.g. ACC-1234"
-                required
-              />
-              <InputField
-                name="business_name"
-                label="Business Name"
-                defaultValue={client?.business_name}
-                placeholder="e.g. Acme Corp Ltd."
-                required
-              />
-              <InputField
-                name="trading_name"
-                label="Trading Name (optional)"
-                defaultValue={client?.trading_name}
-                placeholder="t/a Trading Name"
-              />
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-4 pt-2 border-t border-slate-100">
-              <InputField
-                name="contact_name"
-                label="Contact Name"
-                defaultValue={client?.contact_name}
-                placeholder="Full name"
-                required
-              />
-              <InputField
-                name="email"
-                label="Email Address"
-                type="email"
-                defaultValue={client?.email}
-                placeholder="email@business.com"
-              />
-              <InputField
-                name="phone"
-                label="Phone Number"
-                type="tel"
-                defaultValue={client?.phone}
-                placeholder="+27 11 000 0000"
-              />
-            </div>
-
-            {/* Billing */}
-            <div className="space-y-4 pt-2 border-t border-slate-100">
-              <div>
-                <FieldLabel>Billing Role</FieldLabel>
-                <Select
-                  name="role"
-                  value={role}
-                  onValueChange={(val) =>
-                    setRole(val as "buyer_default" | "buyer_30_day")
-                  }
-                >
-                  <SelectTrigger className="h-10 text-sm border-slate-200 focus:ring-slate-900">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="buyer_default">
-                      EFT Default (buyer_default)
-                    </SelectItem>
-                    <SelectItem value="buyer_30_day">
-                      30-Day Account (buyer_30_day)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  30-Day accounts skip the payment page at checkout.
-                </p>
-              </div>
-
-              {is30Day && (
-                <InputField
-                  name="payment_terms_days"
-                  label="Payment Terms (days)"
-                  type="number"
-                  defaultValue={client?.payment_terms_days ?? ""}
-                  placeholder="30"
-                />
-              )}
-
-              <InputField
-                name="vat_number"
-                label="VAT Registration Number"
-                defaultValue={client?.vat_number}
-                placeholder="e.g. 4123456789"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="pt-2 border-t border-slate-100">
-              <FieldLabel>Internal Notes</FieldLabel>
-              <Textarea
-                name="notes"
-                rows={3}
-                defaultValue={client?.notes ?? ""}
-                placeholder="Any internal notes about this client…"
-                className="text-sm border-slate-200 focus:ring-slate-900 resize-none"
-              />
-            </div>
-
-            {/* Active toggle (edit mode) */}
-            {isEdit && (
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            {/* Create mode: invite form */}
+            {!isEdit && (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Account Active
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Inactive clients cannot log in
-                  </p>
-                </div>
-                <input
-                  type="hidden"
-                  name="is_active"
-                  value={client?.is_active ? "true" : "false"}
-                />
-                <label className="relative inline-flex items-center cursor-pointer">
+                  <FieldLabel>Email *</FieldLabel>
                   <input
-                    type="checkbox"
-                    defaultChecked={client?.is_active ?? true}
-                    onChange={(e) => {
-                      const hidden = e.currentTarget
-                        .closest("form")
-                        ?.querySelector<HTMLInputElement>('input[name="is_active"]');
-                      if (hidden) hidden.value = e.currentTarget.checked ? "true" : "false";
-                    }}
-                    className="sr-only peer"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="client@company.com"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
                   />
-                  <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-slate-900 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
-                </label>
+                </div>
+                <div>
+                  <FieldLabel>Contact Name *</FieldLabel>
+                  <input
+                    name="contact_name"
+                    type="text"
+                    required
+                    placeholder="Full name"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Business Name</FieldLabel>
+                  <input
+                    name="business_name"
+                    type="text"
+                    placeholder="Leave blank if individual"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  An invitation email will be sent to the client. Their account is created
+                  when they accept and set a password.
+                </p>
               </div>
             )}
 
-            {/* Info notice */}
-            <div className="flex gap-4 p-4 bg-blue-50/50 border border-blue-100/50 rounded-lg">
-              <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-medium text-blue-900">Login credentials</p>
-                <p className="text-[11px] text-blue-700 mt-1 leading-relaxed">
-                  Buyers log in with their account number. No password is required — share the account number securely with the client.
-                </p>
-              </div>
-            </div>
+            {/* Edit mode: full form */}
+            {isEdit && (
+              <>
+                {/* Account info */}
+                <div className="space-y-4">
+                  <InputField
+                    name="account_number"
+                    label="Account Number"
+                    defaultValue={client?.account_number}
+                    placeholder="e.g. ACC-1234"
+                    required
+                  />
+                  <InputField
+                    name="business_name"
+                    label="Business Name"
+                    defaultValue={client?.business_name}
+                    placeholder="e.g. Acme Corp Ltd."
+                    required
+                  />
+                  <InputField
+                    name="trading_name"
+                    label="Trading Name (optional)"
+                    defaultValue={client?.trading_name}
+                    placeholder="t/a Trading Name"
+                  />
+                </div>
+
+                {/* Contact */}
+                <div className="space-y-4 pt-2 border-t border-slate-100">
+                  <InputField
+                    name="contact_name"
+                    label="Contact Name"
+                    defaultValue={client?.contact_name}
+                    placeholder="Full name"
+                    required
+                  />
+                  <InputField
+                    name="email"
+                    label="Email Address"
+                    type="email"
+                    defaultValue={client?.email}
+                    placeholder="email@business.com"
+                  />
+                  <InputField
+                    name="phone"
+                    label="Phone Number"
+                    type="tel"
+                    defaultValue={client?.phone}
+                    placeholder="+27 11 000 0000"
+                  />
+                </div>
+
+                {/* Billing */}
+                <div className="space-y-4 pt-2 border-t border-slate-100">
+                  <div>
+                    <FieldLabel>Billing Role</FieldLabel>
+                    <Select
+                      name="role"
+                      value={role}
+                      onValueChange={(val) =>
+                        setRole(val as "buyer_default" | "buyer_30_day")
+                      }
+                    >
+                      <SelectTrigger className="h-10 text-sm border-slate-200 focus:ring-slate-900">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="buyer_default">
+                          EFT Default (buyer_default)
+                        </SelectItem>
+                        <SelectItem value="buyer_30_day">
+                          30-Day Account (buyer_30_day)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-slate-400 mt-1.5">
+                      30-Day accounts skip the payment page at checkout.
+                    </p>
+                  </div>
+
+                  {is30Day && (
+                    <InputField
+                      name="payment_terms_days"
+                      label="Payment Terms (days)"
+                      type="number"
+                      defaultValue={client?.payment_terms_days ?? ""}
+                      placeholder="30"
+                    />
+                  )}
+
+                  <InputField
+                    name="vat_number"
+                    label="VAT Registration Number"
+                    defaultValue={client?.vat_number}
+                    placeholder="e.g. 4123456789"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="pt-2 border-t border-slate-100">
+                  <FieldLabel>Internal Notes</FieldLabel>
+                  <Textarea
+                    name="notes"
+                    rows={3}
+                    defaultValue={client?.notes ?? ""}
+                    placeholder="Any internal notes about this client…"
+                    className="text-sm border-slate-200 focus:ring-slate-900 resize-none"
+                  />
+                </div>
+
+                {/* Active toggle */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Account Active
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Inactive clients cannot log in
+                    </p>
+                  </div>
+                  <input
+                    type="hidden"
+                    name="is_active"
+                    value={client?.is_active ? "true" : "false"}
+                  />
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      defaultChecked={client?.is_active ?? true}
+                      onChange={(e) => {
+                        const hidden = e.currentTarget
+                          .closest("form")
+                          ?.querySelector<HTMLInputElement>('input[name="is_active"]');
+                        if (hidden) hidden.value = e.currentTarget.checked ? "true" : "false";
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-slate-900 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                  </label>
+                </div>
+
+                {/* Info notice */}
+                <div className="flex gap-4 p-4 bg-blue-50/50 border border-blue-100/50 rounded-lg">
+                  <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-blue-900">Login credentials</p>
+                    <p className="text-[11px] text-blue-700 mt-1 leading-relaxed">
+                      Buyers log in with their email address and password via the self-service portal.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sticky footer */}
@@ -333,7 +375,7 @@ export default function ClientDrawer({
                 ) : isEdit ? (
                   "Save Changes"
                 ) : (
-                  "Save Client"
+                  "Send Invite"
                 )}
               </button>
             </div>

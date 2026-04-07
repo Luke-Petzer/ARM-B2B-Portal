@@ -230,45 +230,53 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         )}
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard
-          label="Pending Orders"
-          value={String(pendingCount)}
-          sub="Awaiting EFT verification"
-          icon={<Clock className="w-5 h-5 text-amber-600" />}
-          iconBg="bg-amber-50"
-          badge="EFT"
-          badgeColor="text-amber-600 bg-amber-50"
-        />
-        <KpiCard
-          label="In Progress"
-          value={String(processingCount)}
-          sub="Confirmed & processing"
-          icon={<Loader className="w-5 h-5 text-sky-600" />}
-          iconBg="bg-sky-50"
-          badge="Active"
-          badgeColor="text-sky-600 bg-sky-50"
-        />
-        <KpiCard
-          label="Total Revenue"
-          value={ZAR.format(totalRevenue)}
-          sub="From fulfilled orders"
-          icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
-          iconBg="bg-emerald-50"
-          badge="Fulfilled"
-          badgeColor="text-emerald-600 bg-emerald-50"
-        />
-        <KpiCard
-          label="Active Clients"
-          value={String(activeClients)}
-          sub="Registered buyer accounts"
-          icon={<Users className="w-5 h-5 text-violet-600" />}
-          iconBg="bg-violet-50"
-          badge="Accounts"
-          badgeColor="text-violet-600 bg-violet-50"
-        />
-      </div>
+      {/*
+        ── SIMPLIFIED BRANCH: KPI STAT CARDS REMOVED ──────────────────────────
+        Four summary cards were displayed here in a 2-col / 4-col responsive
+        grid. To restore them, add back:
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <KpiCard
+              label="Pending Orders"
+              value={String(pendingCount)}
+              sub="Awaiting EFT verification"
+              icon={<Clock className="w-5 h-5 text-amber-600" />}
+              iconBg="bg-amber-50"
+              badge="EFT"
+              badgeColor="text-amber-600 bg-amber-50"
+            />
+            <KpiCard
+              label="In Progress"
+              value={String(processingCount)}
+              sub="Confirmed & processing"
+              icon={<Loader className="w-5 h-5 text-sky-600" />}
+              iconBg="bg-sky-50"
+              badge="Active"
+              badgeColor="text-sky-600 bg-sky-50"
+            />
+            <KpiCard
+              label="Total Revenue"
+              value={ZAR.format(totalRevenue)}
+              sub="From fulfilled orders"
+              icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+              iconBg="bg-emerald-50"
+              badge="Fulfilled"
+              badgeColor="text-emerald-600 bg-emerald-50"
+            />
+            <KpiCard
+              label="Active Clients"
+              value={String(activeClients)}
+              sub="Registered buyer accounts"
+              icon={<Users className="w-5 h-5 text-violet-600" />}
+              iconBg="bg-violet-50"
+              badge="Accounts"
+              badgeColor="text-violet-600 bg-violet-50"
+            />
+          </div>
+
+        All data queries (pendingCount, processingCount, totalRevenue,
+        activeClients) and the KpiCard component are still in this file.
+        ────────────────────────────────────────────────────────────────────── */}
 
       {/* Action bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">

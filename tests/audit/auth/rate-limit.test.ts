@@ -136,9 +136,12 @@ describe("Rate Limit: 'unknown' IP bucket collapse — risk documentation", () =
     expect(hasBareUnknownFallback).toBe(false);
   });
 
-  it("FIXED: auth action scopes the unknown fallback to the account number", () => {
-    // Confirms the safer `unknown:${accountNumber}` pattern is present.
-    expect(authActionSource).toMatch(/unknown:\$\{accountNumber\}/);
+  it("FIXED: auth action scopes the unknown fallback to the email address", () => {
+    // buyerLoginAction was replaced with loginAction (email+password via Supabase Auth).
+    // The new action scopes the fallback key to the email address so that a
+    // lockout is confined to the specific identity being targeted, not every user
+    // on the same privacy tool or corporate egress point.
+    expect(authActionSource).toMatch(/unknown:\$\{email\}/);
   });
 
   it("rate-limit module has a noop limiter for environments without Redis", () => {

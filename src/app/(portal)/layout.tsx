@@ -1,5 +1,6 @@
 import { adminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import GlobalBanner from "@/components/portal/GlobalBanner";
 import NavBar from "@/components/portal/NavBar";
 import type { AppRole } from "@/lib/supabase/types";
@@ -24,6 +25,8 @@ export default async function PortalLayout({
   if (bannerError) {
     console.error("[portal/layout] global_settings fetch failed:", bannerError.message);
   }
+
+  if (!session) redirect("/login");
 
   let businessName: string | null = null;
   if (session?.profileId) {

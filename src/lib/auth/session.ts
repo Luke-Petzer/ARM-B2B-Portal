@@ -73,9 +73,9 @@ export async function getSession(
         profileId: profile.id,
         role: profile.role,
         accountNumber: profile.account_number,
-        isBuyer: false,
+        isBuyer: profile.role !== "admin",
         isAdmin: profile.role === "admin",
-        adminRole: profile.admin_role ?? "employee",
+        adminRole: profile.admin_role ?? null,
         isSuperAdmin: !!user.email && superEmails.includes(user.email),
         token: null,
       };

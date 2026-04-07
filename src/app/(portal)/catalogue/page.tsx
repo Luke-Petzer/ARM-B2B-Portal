@@ -1,6 +1,6 @@
+import Image from "next/image";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 
 const TOTAL_PAGES = 11;
 

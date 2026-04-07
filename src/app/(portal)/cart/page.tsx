@@ -25,25 +25,34 @@ export default async function CartPage({ searchParams }: PageProps) {
   }[] = [];
 
   if (reorderId) {
-    const { data: orderItems } = await adminClient
-      .from("order_items")
-      .select("product_id, sku, product_name, unit_price, quantity")
-      .eq("order_id", reorderId);
+    const { data: order } = await adminClient
+      .from("orders")
+      .select("id")
+      .eq("id", reorderId)
+      .eq("profile_id", session.profileId)
+      .maybeSingle();
 
-    type RawItem = {
-      product_id: string | null;
-      sku: string;
-      product_name: string;
-      unit_price: number;
-      quantity: number;
-    };
-    reorderItems = ((orderItems ?? []) as RawItem[]).map((i) => ({
-      productId: i.product_id,
-      sku: i.sku,
-      name: i.product_name,
-      unitPrice: Number(i.unit_price),
-      quantity: i.quantity,
-    }));
+    if (order) {
+      const { data: orderItems } = await adminClient
+        .from("order_items")
+        .select("product_id, sku, product_name, unit_price, quantity")
+        .eq("order_id", reorderId);
+
+      type RawItem = {
+        product_id: string | null;
+        sku: string;
+        product_name: string;
+        unit_price: number;
+        quantity: number;
+      };
+      reorderItems = ((orderItems ?? []) as RawItem[]).map((i) => ({
+        productId: i.product_id,
+        sku: i.sku,
+        name: i.product_name,
+        unitPrice: Number(i.unit_price),
+        quantity: i.quantity,
+      }));
+    }
   }
 
   return (

@@ -609,6 +609,11 @@ export async function uploadProductImageAction(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { error: "No file provided." };
 
+  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return { error: "Only JPEG, PNG, and WebP images are allowed." };
+  }
+
   // Sanitise filename and make it unique
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -648,8 +653,8 @@ export async function createProductAction(
 ): Promise<{ error: string } | { id: string }> {
   await requireAdmin();
 
-  const sku = (formData.get("sku") as string).trim();
-  const name = (formData.get("name") as string).trim();
+  const sku = ((formData.get("sku") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
   const description = (formData.get("description") as string | null)?.trim() ?? null;
   const details = (formData.get("details") as string | null)?.trim() ?? null;
   const priceRaw = parseFloat(formData.get("price") as string);
@@ -749,8 +754,8 @@ export async function updateProductAction(
   const id = formData.get("id") as string | null;
   if (!id) return { error: "Missing product ID." };
 
-  const sku = (formData.get("sku") as string).trim();
-  const name = (formData.get("name") as string).trim();
+  const sku = ((formData.get("sku") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
   const description = (formData.get("description") as string | null)?.trim() ?? null;
   const details = (formData.get("details") as string | null)?.trim() ?? null;
   const priceRaw = parseFloat(formData.get("price") as string);
@@ -913,64 +918,44 @@ export async function toggleProductActiveAction(
 }
 
 // ---------------------------------------------------------------------------
-// createClientAction
+// inviteClientAction
 // ---------------------------------------------------------------------------
+// Sends a Supabase Auth invite email to a new buyer.
+// The handle_new_buyer_user trigger creates their profile automatically
+// when they accept the invite and set their password.
 
-export async function createClientAction(
+export async function inviteClientAction(
   formData: FormData
-): Promise<{ error: string } | { id: string }> {
+): Promise<{ error: string } | { success: true }> {
   await requireAdmin();
 
-  const accountNumber = (formData.get("account_number") as string).trim();
-  const businessName = (formData.get("business_name") as string).trim();
-  const contactName = (formData.get("contact_name") as string).trim();
-  const email = (formData.get("email") as string | null)?.trim() || null;
-  const phone = (formData.get("phone") as string | null)?.trim() || null;
-  const role = formData.get("role") as "buyer_default" | "buyer_30_day";
-  const vatNumber = (formData.get("vat_number") as string | null)?.trim() || null;
-  const creditLimit = parseFloat(formData.get("credit_limit") as string) || null;
-  const rawAvailableCredit = formData.get("available_credit") as string | null;
-  const availableCredit =
-    rawAvailableCredit === "" || rawAvailableCredit === null
-      ? null
-      : parseFloat(rawAvailableCredit);
-  const termsDays = parseInt(formData.get("payment_terms_days") as string, 10) || null;
-  const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const email = (formData.get("email") as string)?.trim();
+  const contactName = (formData.get("contact_name") as string)?.trim();
+  const businessName = (formData.get("business_name") as string)?.trim() || undefined;
 
-  if (!accountNumber || !businessName || !contactName) {
-    return { error: "Account number, business name, and contact name are required." };
-  }
-  if (!["buyer_default", "buyer_30_day"].includes(role)) {
-    return { error: "Invalid billing role." };
+  if (!email || !contactName) {
+    return { error: "Email and contact name are required." };
   }
 
-  const { data, error } = await adminClient
-    .from("profiles")
-    .insert({
-      account_number: accountNumber,
-      business_name: businessName,
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { error: "Please enter a valid email address." };
+  }
+
+  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    data: {
+      role: "buyer_default",
       contact_name: contactName,
-      email,
-      phone,
-      role,
-      vat_number: vatNumber,
-      credit_limit: creditLimit,
-      available_credit: availableCredit,
-      payment_terms_days: termsDays,
-      notes,
-      is_active: true,
-    })
-    .select("id")
-    .single();
+      business_name: businessName ?? "",
+    },
+  });
 
   if (error) {
-    console.error("[admin] createClient:", error.message);
-    if (error.code === "23505") return { error: "A client with this account number already exists." };
-    return { error: "Failed to create client. Please try again." };
+    return { error: error.message };
   }
 
   revalidatePath("/admin/clients");
-  return { id: data.id };
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -985,12 +970,16 @@ export async function updateClientAction(
   const id = formData.get("id") as string | null;
   if (!id) return { error: "Missing client ID." };
 
-  const accountNumber = (formData.get("account_number") as string).trim();
-  const businessName = (formData.get("business_name") as string).trim();
-  const contactName = (formData.get("contact_name") as string).trim();
+  const accountNumber = ((formData.get("account_number") as string) ?? "").trim();
+  const businessName = ((formData.get("business_name") as string) ?? "").trim();
+  const contactName = ((formData.get("contact_name") as string) ?? "").trim();
   const email = (formData.get("email") as string | null)?.trim() || null;
   const phone = (formData.get("phone") as string | null)?.trim() || null;
-  const role = formData.get("role") as "buyer_default" | "buyer_30_day";
+  const rawRole = formData.get("role") as string | null;
+  const role: "buyer_default" | "buyer_30_day" =
+    rawRole === "buyer_default" || rawRole === "buyer_30_day"
+      ? rawRole
+      : "buyer_default";
   const vatNumber = (formData.get("vat_number") as string | null)?.trim() || null;
   const creditLimit = parseFloat(formData.get("credit_limit") as string) || null;
   const rawAvailableCredit = formData.get("available_credit") as string | null;

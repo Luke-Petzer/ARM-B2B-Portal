@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ordering Portal",
-  description: "B2B Ordering Portal",
+  title: "AR Steel Manufacturing",
+  description: "Precision-manufactured steel products and hardware solutions.",
 };
 
 export default function RootLayout({
@@ -19,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-[100dvh] overflow-hidden" style={{ colorScheme: "light" }}>
-      <body className={`${inter.variable} font-inter antialiased h-[100dvh] overflow-hidden`}>
+    <html lang="en" className="scroll-smooth" style={{ colorScheme: "light" }}>
+      <body className={`${inter.variable} font-inter antialiased`}>
         {children}
       </body>
     </html>

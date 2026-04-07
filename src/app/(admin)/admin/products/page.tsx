@@ -1,7 +1,13 @@
 import { adminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 import ProductsTable from "./ProductsTable";
 
 export default async function AdminProductsPage() {
+  const session = await getSession();
+  if (!session?.isAdmin) redirect("/admin/login" as Route);
+
   // Fetch products ordered alphabetically by SKU
   const [{ data: products }, { data: categories }] = await Promise.all([
     adminClient

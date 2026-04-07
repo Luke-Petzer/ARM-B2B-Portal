@@ -1,7 +1,13 @@
 import { adminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 import ClientsTable, { type UnpaidOrder } from "./ClientsTable";
 
 export default async function AdminClientsPage() {
+  const session = await getSession();
+  if (!session?.isAdmin) redirect("/admin/login" as Route);
+
   const { data: clients } = await adminClient
     .from("profiles")
     .select("*")

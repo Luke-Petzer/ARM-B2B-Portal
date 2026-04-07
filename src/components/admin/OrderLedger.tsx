@@ -283,7 +283,7 @@ function ExpandedRow({
 
   return (
     <tr>
-      <td colSpan={6} className="p-0">
+      <td colSpan={5} className="p-0">
         <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -291,22 +291,30 @@ function ExpandedRow({
               Line Items — {order.reference_number}
             </h3>
             <div className="flex items-center gap-3">
-              {/* Assignment badge / Assign to Me */}
-              {assigneeName ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
-                  Assigned: {assigneeName}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleAssign}
-                  disabled={isAssigning}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  {isAssigning ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                  Assign to Me
-                </button>
-              )}
+              {/*
+                ── SIMPLIFIED BRANCH: ASSIGN TO ME BUTTON REMOVED ─────────────
+                Before the item count span there was an assignment conditional:
+                - If the order already has an assignee → show a violet badge:
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1
+                      rounded-full text-[11px] font-medium bg-violet-50
+                      text-violet-700 border border-violet-200">
+                      Assigned: {assigneeName}
+                    </span>
+                - If unassigned → show an "Assign to Me" button:
+                    <button type="button" onClick={handleAssign}
+                      disabled={isAssigning}
+                      className="inline-flex items-center gap-1.5 px-3 py-1
+                        rounded-full text-[11px] font-medium bg-slate-100
+                        text-slate-600 border border-slate-200
+                        hover:bg-violet-50 hover:text-violet-700
+                        hover:border-violet-200 transition-colors
+                        disabled:opacity-40 disabled:pointer-events-none">
+                      {isAssigning ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      Assign to Me
+                    </button>
+                Handlers (handleAssign, isAssigning) and the assigneeName
+                derived variable are still in this component.
+                ─────────────────────────────────────────────────────────────── */}
               <span className="text-xs text-slate-400">
                 {order.items.length} item{order.items.length !== 1 ? "s" : ""}
               </span>
@@ -413,138 +421,159 @@ function ExpandedRow({
           )}
 
           {/* Actions row */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400">
-                Created: {fmtDate(order.created_at)} ·{" "}
-                <span className="capitalize">{order.payment_method.replace(/_/g, " ")}</span>
-              </span>
-              {/* Send Statement — 30-day orders */}
-              {order.payment_method === "30_day_account" && (
-                <button
-                  type="button"
-                  onClick={handleSendStatement}
-                  disabled={isSendingStatement}
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  {isSendingStatement ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                  Send Statement
-                </button>
-              )}
-              {statementResult && (
-                <span className={`text-xs ${statementResult.ok ? "text-emerald-600" : "text-red-600"}`}>
-                  {statementResult.message}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              {error && (
-                <span className="text-xs text-red-600">{error}</span>
-              )}
-              {/* ── Cancel — pending orders only ── */}
-              {order.status === "pending" && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={isCancelling}
-                      className="h-9 px-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
-                      Cancel Order
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently cancel order {order.reference_number}. The buyer will not be notified automatically. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Keep Order</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleCancel}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Yes, Cancel Order
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              {/* ── EFT: single "Approve & Mark Paid" ── */}
-              {order.status === "pending" && order.payment_method === "eft" && (
-                <ApproveDialog
-                  label="Approve & Mark Paid"
-                  description="This verifies payment and notifies dispatch. This action cannot be undone."
-                  onConfirm={() => handleApprove("paid")}
-                  isLoading={isApproving}
-                />
-              )}
+          {/*
+            ── SIMPLIFIED BRANCH: ALL ACTION BUTTONS REMOVED ──────────────────
+            The original actions row was a flex-between div with two sides:
 
-              {/* ── 30-Day: two buttons for pending orders ── */}
-              {order.status === "pending" && order.payment_method === "30_day_account" && (
-                <>
+            LEFT SIDE — informational metadata + Send Statement button:
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400">
+                  Created: {fmtDate(order.created_at)} ·{" "}
+                  <span className="capitalize">{order.payment_method.replace(/_/g, " ")}</span>
+                </span>
+                // Send Statement — 30-day orders only:
+                {order.payment_method === "30_day_account" && (
+                  <button type="button" onClick={handleSendStatement}
+                    disabled={isSendingStatement}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5
+                      rounded-lg text-[11px] font-medium border border-slate-200
+                      text-slate-500 hover:bg-slate-50 transition-colors
+                      disabled:opacity-40 disabled:pointer-events-none">
+                    {isSendingStatement ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    Send Statement
+                  </button>
+                )}
+                {statementResult && (
+                  <span className={`text-xs ${statementResult.ok ? "text-emerald-600" : "text-red-600"}`}>
+                    {statementResult.message}
+                  </span>
+                )}
+              </div>
+
+            RIGHT SIDE — order action buttons (conditional on status + payment_method):
+              <div className="flex items-center gap-4">
+                {error && <span className="text-xs text-red-600">{error}</span>}
+
+                // 1. CANCEL ORDER — pending orders only:
+                {order.status === "pending" && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <button
-                        type="button"
-                        disabled={approveOnCreditDisabled}
-                        title={
-                          isHardBlocked
-                            ? "Blocked: overdue invoices"
-                            : willExceedLimit && !isSuperAdmin
-                            ? "Approval blocked: Credit limit exceeded"
-                            : willExceedLimit && isSuperAdmin && !creditOverrideAcknowledged
-                            ? "Acknowledge the credit limit override above to enable"
-                            : undefined
-                        }
-                        className="h-9 px-4 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                      >
-                        {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                        Approve on Credit
+                      <button type="button" disabled={isCancelling}
+                        className="h-9 px-4 bg-red-50 text-red-700 border
+                          border-red-200 rounded-lg text-sm font-medium
+                          hover:bg-red-100 transition-colors shadow-sm
+                          flex items-center gap-2 disabled:opacity-40
+                          disabled:pointer-events-none">
+                        {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                        Cancel Order
                       </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm: Approve on Credit</AlertDialogTitle>
+                        <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Approves this order against the client&apos;s credit account. Revenue is recognised now.
+                          This will permanently cancel order {order.reference_number}.
+                          The buyer will not be notified automatically. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleApprove("credit_approved")}
-                          className="bg-sky-600 hover:bg-sky-700 text-white"
-                        >
-                          Approve on Credit
+                        <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancel}
+                          className="bg-red-600 hover:bg-red-700 text-white">
+                          Yes, Cancel Order
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                )}
+
+                // 2. APPROVE & MARK PAID (EFT) — pending EFT orders only:
+                {order.status === "pending" && order.payment_method === "eft" && (
                   <ApproveDialog
                     label="Approve & Mark Paid"
-                    description="Client is paying immediately. This marks the order as paid and notifies dispatch."
+                    description="This verifies payment and notifies dispatch. This action cannot be undone."
                     onConfirm={() => handleApprove("paid")}
                     isLoading={isApproving}
                   />
-                </>
-              )}
+                )}
 
-              {/* ── 30-Day: credit-approved order settling later ── */}
-              {order.status === "confirmed" && order.payment_status === "credit_approved" && (
-                <ApproveDialog
-                  label="Mark as Paid"
-                  description="Record that this credit account order has now been settled."
-                  confirmLabel="Confirm Payment"
-                  onConfirm={() => handleApprove("paid")}
-                  isLoading={isApproving}
-                  variant="secondary"
-                />
-              )}
-            </div>
+                // 3. TWO BUTTONS for 30-day pending orders:
+                {order.status === "pending" && order.payment_method === "30_day_account" && (
+                  <>
+                    // 3a. APPROVE ON CREDIT (disabled if overdue or credit limit exceeded):
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button type="button" disabled={approveOnCreditDisabled}
+                          title={
+                            isHardBlocked ? "Blocked: overdue invoices"
+                            : willExceedLimit && !isSuperAdmin ? "Approval blocked: Credit limit exceeded"
+                            : willExceedLimit && isSuperAdmin && !creditOverrideAcknowledged
+                              ? "Acknowledge the credit limit override above to enable"
+                            : undefined
+                          }
+                          className="h-9 px-4 bg-slate-100 text-slate-700
+                            border border-slate-200 rounded-lg text-sm
+                            font-medium hover:bg-slate-200 transition-colors
+                            shadow-sm flex items-center gap-2 disabled:opacity-40
+                            disabled:pointer-events-none">
+                          {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                          Approve on Credit
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirm: Approve on Credit</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Approves this order against the client's credit account. Revenue is recognised now.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleApprove("credit_approved")}
+                            className="bg-sky-600 hover:bg-sky-700 text-white">
+                            Approve on Credit
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    // 3b. APPROVE & MARK PAID (immediate payment):
+                    <ApproveDialog
+                      label="Approve & Mark Paid"
+                      description="Client is paying immediately. This marks the order as paid and notifies dispatch."
+                      onConfirm={() => handleApprove("paid")}
+                      isLoading={isApproving}
+                    />
+                  </>
+                )}
+
+                // 4. MARK AS PAID — confirmed 30-day credit orders settling later:
+                {order.status === "confirmed" && order.payment_status === "credit_approved" && (
+                  <ApproveDialog
+                    label="Mark as Paid"
+                    description="Record that this credit account order has now been settled."
+                    confirmLabel="Confirm Payment"
+                    onConfirm={() => handleApprove("paid")}
+                    isLoading={isApproving}
+                    variant="secondary"
+                  />
+                )}
+              </div>
+
+            All handlers (handleCancel, handleApprove, handleSendStatement),
+            state (isCancelling, isApproving, isSendingStatement, statementResult,
+            error, approveOnCreditDisabled, isHardBlocked, willExceedLimit,
+            creditOverrideAcknowledged), and the ApproveDialog component are
+            still defined in this file.
+
+            To restore the full actions row, replace the minimal <div> below
+            with the outer <div className="flex items-center justify-between mt-4">
+            structure containing the left and right sides documented above.
+            ─────────────────────────────────────────────────────────────────── */}
+          <div className="flex items-center mt-4">
+            <span className="text-xs text-slate-400">
+              Created: {fmtDate(order.created_at)} ·{" "}
+              <span className="capitalize">{order.payment_method.replace(/_/g, " ")}</span>
+            </span>
           </div>
         </div>
       </td>
@@ -709,15 +738,26 @@ export default function OrderLedger({
             <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider px-6 py-3">
               Total Value
             </th>
-            <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider px-6 py-3">
-              POS Status
-            </th>
+            {/*
+              ── SIMPLIFIED BRANCH: POS STATUS COLUMN HEADER REMOVED ──────────
+              A 6th column header was here. To restore it, add back:
+                <th className="text-center text-[11px] font-medium text-slate-400
+                  uppercase tracking-wider px-6 py-3">
+                  POS Status
+                </th>
+              Also restore the matching <td> in each data row (see comment
+              below the Total Value <td>), and update both colSpan={5} values
+              in this file back to colSpan={6}:
+                - The "No orders found" empty-state <td>
+                - The ExpandedRow outer <td> at the top of the ExpandedRow component
+              The StatusBadge component and order.status are still available.
+              ─────────────────────────────────────────────────────────────── */}
           </tr>
         </thead>
         <tbody>
           {orders.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-16 text-center text-sm text-slate-400">
+              <td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-400">
                 No orders found.
               </td>
             </tr>
@@ -753,9 +793,16 @@ export default function OrderLedger({
                     <td className="px-6 py-4 text-sm text-slate-900 font-medium text-right">
                       {ZAR.format(Number(order.total_amount))}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <StatusBadge status={order.status} />
-                    </td>
+                    {/*
+                      ── SIMPLIFIED BRANCH: POS STATUS DATA CELL REMOVED ──────
+                      A 6th <td> was here rendering the order status badge.
+                      To restore it, add back:
+                        <td className="px-6 py-4 text-center">
+                          <StatusBadge status={order.status} />
+                        </td>
+                      Remember to also restore the <th> header above and
+                      update both colSpan={5} → colSpan={6} (see header comment).
+                      ───────────────────────────────────────────────────────── */}
                   </tr>
                   {isExpanded && (
                     <ExpandedRow
