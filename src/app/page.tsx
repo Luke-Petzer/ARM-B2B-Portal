@@ -113,7 +113,7 @@ export default function LandingPage() {
             alt="AR Steel Manufacturing"
             height={isPill ? 48 : 60}
             width={isPill ? 120 : 150}
-            className="object-contain transition-all duration-300"
+            className="object-contain transition-all duration-300 border border-[#1a3a6e] rounded"
             priority
           />
         </Link>
