@@ -3,6 +3,7 @@
 import { Bebas_Neue } from 'next/font/google'
 import Image from 'next/image'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { ArrowDown, Linkedin, Instagram, Phone, Mail, MapPin } from 'lucide-react'
 
 const bebasNeue = Bebas_Neue({
@@ -80,40 +81,42 @@ const departments = [
 
 export default function LandingPage() {
   return (
-    <div className={`${bebasNeue.variable} min-h-screen bg-[#050d14] text-white`}>
+    <div className={`${bebasNeue.variable} min-h-screen bg-[#050d14] text-white overflow-x-hidden`}>
 
       {/* ── NAVBAR ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 py-6">
-        <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
-          <Image
-            src="/logo-dark.png"
-            alt="AR Steel Manufacturing"
-            height={60}
-            width={150}
-            className="object-contain border border-[#1a3a6e] rounded"
-            priority
-          />
-        </Link>
-
-        <div className="flex items-center gap-5 md:gap-8">
-          <a
-            href="#services"
-            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
-          >
-            Services
-          </a>
-          <a
-            href="#footer"
-            className="text-sm text-white/60 hover:text-white transition-colors duration-200 cursor-pointer font-inter hidden sm:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
-          >
-            Contact Us
-          </a>
-          <Link
-            href="/login"
-            className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 rounded-full transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
-          >
-            Login
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#050d14]/80 backdrop-blur-md">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-16 lg:px-24 py-4 flex items-center justify-between">
+          <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+            <Image
+              src="/logo-dark.png"
+              alt="AR Steel Manufacturing"
+              height={42}
+              width={105}
+              className="object-contain border border-[#1a3a6e] rounded"
+              priority
+            />
           </Link>
+
+          <div className="flex items-center gap-5 md:gap-8">
+            <a
+              href="#services"
+              className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
+            >
+              Services
+            </a>
+            <a
+              href="#footer"
+              className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
+            >
+              Contact Us
+            </a>
+            <Link
+              href="/login"
+              className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 min-h-[44px] rounded-sm transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+            >
+              Login
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -136,7 +139,7 @@ export default function LandingPage() {
           }}
         />
 
-        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 pt-40 pb-24">
+        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 pt-28 md:pt-40 pb-24">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-2 h-2 bg-white/50 rotate-45 flex-shrink-0" />
             <span className="text-white/40 font-inter text-xs tracking-[0.3em] uppercase">
@@ -144,7 +147,7 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <h1 className="font-bebas text-[76px] md:text-[100px] lg:text-[120px] leading-[0.92] text-white mb-8 max-w-4xl">
+          <h1 className="font-bebas text-5xl sm:text-7xl md:text-[100px] lg:text-[120px] leading-[0.92] text-white mb-8 max-w-4xl">
             Built From Steel.<br />
             Built to Last.
           </h1>
@@ -157,13 +160,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <a
               href="#services"
-              className="bg-white text-[#050d14] px-8 py-3 font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+              className="bg-white text-[#050d14] px-8 py-3 min-h-[44px] font-inter font-semibold text-sm hover:bg-white/90 transition-colors duration-200 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Our Services
             </a>
             <Link
               href="/login"
-              className="border border-white/25 text-white px-8 py-3 font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+              className="border border-white/25 text-white px-8 py-3 min-h-[44px] font-inter font-semibold text-sm hover:bg-white/10 hover:border-white/50 transition-all duration-200 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
             >
               Login
             </Link>
@@ -182,32 +185,34 @@ export default function LandingPage() {
           return (
             <div
               key={dept.number}
-              className={`group py-24 md:py-32 ${isEven ? 'bg-[#0a1929]' : 'bg-[#050d14]'}`}
+              className={`py-14 md:py-32 ${isEven ? 'bg-[#0a1929]' : 'bg-[#050d14]'}`}
             >
-              <div className="max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24">
+              <div className="max-w-[1400px] mx-auto px-6 md:px-16 lg:px-24">
                 <div
                   className={`flex flex-col ${
                     isEven ? 'lg:flex-row-reverse' : 'lg:flex-row'
                   } items-center gap-12 lg:gap-20`}
                 >
                   {/* Text half */}
-                  <div className="w-full lg:w-5/12 flex flex-col items-start relative">
-                    {/* Ghost section number */}
+                  <motion.div
+                    className="w-full lg:w-5/12 flex flex-col items-start relative overflow-hidden"
+                    initial={{ opacity: 0, y: 32 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-50px' }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                  >
                     <span
-                      className="font-bebas text-[120px] md:text-[160px] leading-none text-white/[0.04] select-none absolute -top-6 -left-2 pointer-events-none"
+                      className="font-bebas text-[80px] md:text-[120px] lg:text-[160px] leading-none text-white/[0.04] select-none absolute -top-6 -left-2 pointer-events-none"
                       aria-hidden="true"
                     >
                       {dept.number}
                     </span>
 
-                    <h2 className="font-bebas text-5xl md:text-6xl text-white uppercase leading-tight mb-3 relative z-10">
+                    <h2 className="font-bebas text-4xl md:text-5xl lg:text-6xl text-white uppercase leading-tight mb-3 relative z-10">
                       {dept.name}
                     </h2>
 
-                    {/* Animated underline */}
-                    <div className="h-px w-full bg-white/[0.08] mb-5 relative overflow-hidden">
-                      <div className="absolute inset-y-0 left-0 bg-white/30 w-0 group-hover:w-full transition-all duration-700 ease-in-out" />
-                    </div>
+                    <div className="h-px w-full bg-white/[0.12] mb-5" />
 
                     <p className="font-inter text-[11px] font-semibold tracking-[0.2em] uppercase text-white/70 mb-5 flex items-center gap-3">
                       <span className="w-1.5 h-1.5 bg-white/40 rotate-45 flex-shrink-0 inline-block" />
@@ -217,21 +222,26 @@ export default function LandingPage() {
                     <p className="font-inter text-base text-white/45 leading-relaxed">
                       {dept.description}
                     </p>
-                  </div>
+                  </motion.div>
 
                   {/* Image half */}
-                  <div className="w-full lg:w-7/12 overflow-hidden">
+                  <motion.div
+                    className="w-full lg:w-7/12 overflow-hidden"
+                    initial={{ opacity: 0, y: 32 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-50px' }}
+                    transition={{ duration: 0.55, ease: 'easeOut', delay: 0.12 }}
+                  >
                     <div className="aspect-[4/3] overflow-hidden relative">
-                      <div className="absolute inset-0 z-10 bg-[#050d14]/[0.55] group-hover:bg-transparent transition-all duration-700" />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={dept.image}
                         alt={dept.imageAlt}
-                        className="object-cover w-full h-full grayscale-[50%] brightness-75 contrast-125 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                        className="object-cover w-full h-full grayscale-[40%] brightness-75 contrast-125 transition-all duration-500"
                         loading="lazy"
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
             </div>
@@ -273,7 +283,7 @@ export default function LandingPage() {
                 alt="AR Steel Manufacturing"
                 height={60}
                 width={150}
-                className="object-contain mb-5"
+                className="object-contain mb-5 max-w-[120px]"
               />
               <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
                 Precision-manufactured steel products and hardware for the
