@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,11 +20,23 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function CallbackError() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("error") !== "auth_callback_failed") return null;
+  return (
+    <p className="text-sm text-red-500 text-center">
+      Your verification link has expired. Please{" "}
+      <Link href="/register" className="underline underline-offset-4">
+        register again
+      </Link>
+      .
+    </p>
+  );
+}
+
 export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const callbackError = searchParams.get("error") === "auth_callback_failed";
 
   const {
     register,
@@ -85,15 +97,9 @@ export default function LoginPage() {
           )}
         </div>
 
-        {callbackError && (
-          <p className="text-sm text-red-500 text-center">
-            Your verification link has expired. Please{" "}
-            <Link href="/register" className="underline underline-offset-4">
-              register again
-            </Link>
-            .
-          </p>
-        )}
+        <Suspense>
+          <CallbackError />
+        </Suspense>
 
         {serverError && (
           <p className="text-sm text-red-500 text-center">{serverError}</p>
