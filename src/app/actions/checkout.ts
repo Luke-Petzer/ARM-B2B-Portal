@@ -367,21 +367,44 @@ export async function markPaymentSubmittedAction(
   const session = await getSession();
   if (!session) redirect("/login" as Route);
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [M5] Validate orderId as UUID and buyer_reference length
+  const rawOrderId = formData.get("orderId") as string | null;
+  const orderIdResult = z.string().uuid("Invalid order ID.").safeParse(rawOrderId);
+  if (!orderIdResult.success) return { error: orderIdResult.error.issues[0].message };
+  const orderId = orderIdResult.data;
 
-  const buyerReference = (formData.get("buyer_reference") as string | null)?.trim() || null;
+  const rawRef = (formData.get("buyer_reference") as string | null)?.trim() || null;
+  if (rawRef && rawRef.length > 100) return { error: "Reference too long (max 100 characters)." };
+  const buyerReference = rawRef;
 
   // Verify this order belongs to the authenticated buyer
   const { data: order, error: fetchError } = await adminClient
     .from("orders")
-    .select("id, total_amount, payment_method, profile_id")
+    .select("id, total_amount, payment_method, profile_id, status")
     .eq("id", orderId)
     .eq("profile_id", session.profileId)
     .single();
 
   if (fetchError || !order) {
     return { error: "Order not found." };
+  }
+
+  // [M5] Only allow payment submission on pending orders
+  if (order.status !== "pending") {
+    return { error: "Payment can only be submitted for pending orders." };
+  }
+
+  // [M5] Reject if there's already a pending payment for this order
+  const { data: existingPayment } = await adminClient
+    .from("payments")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("status", "pending")
+    .limit(1)
+    .maybeSingle();
+
+  if (existingPayment) {
+    return { error: "A payment submission is already pending for this order." };
   }
 
   // Save PO number to buyer_reference if supplied
