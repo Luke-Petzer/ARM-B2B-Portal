@@ -76,6 +76,14 @@ export async function loginAction(
 
   // Check role to route admins to the admin portal, buyers to the dashboard
   const { data: { user } } = await supabase.auth.getUser();
+
+  // [H4] Defensive email verification check — don't rely solely on Supabase
+  // project settings. If email_confirmed_at is null, sign out immediately.
+  if (user && !user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return { error: "Please verify your email address before signing in." };
+  }
+
   if (user) {
     const { data: profile } = await adminClient
       .from("profiles")
@@ -244,6 +252,12 @@ export async function adminLoginAction(
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Authentication failed." };
+
+  // [H4] Defensive email verification check
+  if (!user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return { error: "Please verify your email address before signing in." };
+  }
 
   const { data: profile } = await adminClient
     .from("profiles")

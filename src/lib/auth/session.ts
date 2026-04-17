@@ -57,6 +57,12 @@ export async function getSession(
     data: { user },
   } = await supabase.auth.getUser();
 
+  // [H4] Defensive email verification check at session level
+  if (user && !user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
   if (user) {
     // Use adminClient (service role) to bypass RLS on profiles.
     // Supabase Auth dashboard users don't have app_role in their JWT, so both
