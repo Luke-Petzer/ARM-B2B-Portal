@@ -998,6 +998,11 @@ export async function inviteClientAction(
     return { error: "Email and contact name are required." };
   }
 
+  // [M12] Input bounds validation
+  if (email.length > 254) return { error: "Email too long (max 254 characters)." };
+  if (contactName.length > 120) return { error: "Contact name too long (max 120 characters)." };
+  if (businessName && businessName.length > 120) return { error: "Business name too long (max 120 characters)." };
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return { error: "Please enter a valid email address." };
@@ -1028,8 +1033,10 @@ export async function updateClientAction(
 ): Promise<{ error: string } | void> {
   await requireAdmin();
 
-  const id = formData.get("id") as string | null;
-  if (!id) return { error: "Missing client ID." };
+  const rawId = formData.get("id") as string | null;
+  const idResult = z.string().uuid("Invalid client ID.").safeParse(rawId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+  const id = idResult.data;
 
   const accountNumber = ((formData.get("account_number") as string) ?? "").trim();
   const businessName = ((formData.get("business_name") as string) ?? "").trim();
@@ -1055,6 +1062,19 @@ export async function updateClientAction(
   if (!accountNumber || !businessName || !contactName) {
     return { error: "Account number, business name, and contact name are required." };
   }
+
+  // [M12] Input bounds validation
+  if (contactName.length > 120) return { error: "Contact name too long (max 120 characters)." };
+  if (businessName.length > 120) return { error: "Business name too long (max 120 characters)." };
+  if (email && email.length > 254) return { error: "Email too long (max 254 characters)." };
+  if (phone && phone.length > 30) return { error: "Phone too long (max 30 characters)." };
+  if (vatNumber && vatNumber.length > 30) return { error: "VAT number too long (max 30 characters)." };
+  if (creditLimit !== null && (!Number.isFinite(creditLimit) || creditLimit < 0 || creditLimit > 1e9))
+    return { error: "Credit limit out of range (0–R1,000,000,000)." };
+  if (availableCredit !== null && (!Number.isFinite(availableCredit) || availableCredit < 0 || availableCredit > 1e9))
+    return { error: "Available credit out of range." };
+  if (termsDays !== null && (termsDays < 0 || termsDays > 365))
+    return { error: "Payment terms must be 0–365 days." };
 
   const { error } = await adminClient
     .from("profiles")
