@@ -583,10 +583,17 @@ export async function exportOrdersCsvAction(
 }
 
 function csvEsc(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // [M10] Neutralise CSV formula injection (CWE-1236): prefix dangerous
+  // leading characters with a single quote so spreadsheet apps treat the
+  // cell as a literal string instead of a formula.
+  let v = value;
+  if (/^[=+\-@\t\r]/.test(v)) {
+    v = `'${v}`;
   }
-  return value;
+  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("'")) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
 }
 
 // ---------------------------------------------------------------------------

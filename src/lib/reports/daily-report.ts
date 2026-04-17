@@ -6,10 +6,15 @@ import { adminClient } from "@/lib/supabase/admin";
 // CSV escape helper — wraps values containing commas, quotes or newlines
 // ---------------------------------------------------------------------------
 function csvEsc(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // [M10] Neutralise CSV formula injection (CWE-1236)
+  let v = value;
+  if (/^[=+\-@\t\r]/.test(v)) {
+    v = `'${v}`;
   }
-  return value;
+  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("'")) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
 }
 
 // ---------------------------------------------------------------------------
