@@ -16,24 +16,25 @@ export interface AuthActionResult {
 
 // ── Validation schemas ─────────────────────────────────────────────────────
 
+// [L3] All auth schemas include max-length caps to prevent oversized input
 const loginSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required.").max(128),
 });
 
 const signUpSchema = z.object({
-  contact_name: z.string().trim().min(1, "Contact name is required."),
-  business_name: z.string().trim().optional(),
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  contact_name: z.string().trim().min(1, "Contact name is required.").max(120),
+  business_name: z.string().trim().max(120).optional(),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(128),
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
 });
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(128),
 });
 
 // ── Buyer login (email + password via Supabase Auth) ──────────────────────
@@ -213,8 +214,8 @@ export async function resetPasswordAction(
 // ── Admin login (unchanged) ────────────────────────────────────────────────
 
 const adminLoginSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required.").max(128),
 });
 
 export async function adminLoginAction(
