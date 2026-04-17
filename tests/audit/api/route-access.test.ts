@@ -98,11 +98,11 @@ describe("Cron Route (/api/cron/daily-report): secret validation", () => {
     expect(cronRouteSource).toMatch(/status:\s*401/);
   });
 
-  it("uses exact string equality — not startsWith or partial match — to validate the token", () => {
-    // Full string equality prevents prefix-bypass attacks where an attacker
-    // provides a token that starts with the real secret but contains extra data.
-    // The expression must be: authHeader !== `Bearer ${cronSecret}`
-    expect(cronRouteSource).toMatch(/authHeader\s*!==\s*`Bearer \$\{cronSecret\}`/);
+  it("uses timingSafeEqual for constant-time token comparison — not string equality", () => {
+    // [M15] Timing-safe comparison prevents timing side-channel attacks where
+    // an attacker can measure response times to progressively guess the secret.
+    // The comparison must use crypto.timingSafeEqual on Buffer representations.
+    expect(cronRouteSource).toMatch(/timingSafeEqual/);
     expect(cronRouteSource).not.toMatch(/startsWith/);
     expect(cronRouteSource).not.toMatch(/includes\s*\(/);
   });
@@ -151,37 +151,25 @@ describe("daily-report.ts: CSV injection surface", () => {
   it("csvEsc wraps values containing commas in double-quotes (RFC 4180)", () => {
     // A value like 'Smith, Ltd' must be emitted as '"Smith, Ltd"' to avoid
     // splitting into spurious columns.
-    expect(dailyReportLibSource).toMatch(/value\.includes\(","\)/);
+    expect(dailyReportLibSource).toMatch(/v\.includes\(","\)/);
   });
 
   it("csvEsc escapes internal double-quotes by doubling them (RFC 4180)", () => {
     // 'She said "hello"' → '"She said ""hello"""'
-    // The replace pattern must be: value.replace(/"/g, '""')
-    expect(dailyReportLibSource).toMatch(/value\.replace\(\/"\//);
+    // The replace pattern must be: v.replace(/"/g, '""')
+    expect(dailyReportLibSource).toMatch(/v\.replace\(\/"\//);
     expect(dailyReportLibSource).toMatch(/'""'/);
   });
 
-  it("RISK DOCUMENTED: csvEsc does NOT sanitise formula-injection characters", () => {
-    // csvEsc only quotes values that contain commas, double-quotes, or newlines.
-    // Values starting with '=', '+', '-', or '@' (e.g. a business name like
-    // '=SUM(A1:A100)' or a SKU like '+CMD|/C calc!A1') are passed through
-    // unmodified.
-    //
-    // Impact: when an admin opens the downloaded CSV in Microsoft Excel or
-    //         LibreOffice Calc, formulae in those cells may execute automatically.
-    //
-    // Severity: MEDIUM
-    //   - The route is admin-only, so exploitation requires a malicious buyer to
-    //     register a business name or SKU that begins with a formula character,
-    //     AND for an admin to open the file in a vulnerable spreadsheet app.
-    //   - Buyer-submitted data (business_name, sku, product_name) flows directly
-    //     into CSV rows via csvEsc without formula-prefix stripping.
-    //
-    // Recommended fix: prepend a single-quote or tab to any value whose first
-    //   character is one of =, +, -, @, tab, carriage-return before quoting.
-    //
-    // This test is documentation-only — no code assertion is made.
-    expect(true).toBe(true);
+  it("[M10] csvEsc sanitises formula-injection characters by prefixing with a single quote", () => {
+    // [M10] csvEsc now prefixes values starting with =, +, -, @, tab, or
+    // carriage-return with a single quote so spreadsheet apps treat the cell
+    // as a literal string instead of a formula (CWE-1236 mitigation).
+    const csvEscBody = dailyReportLibSource.match(/function csvEsc[\s\S]*?\n\}/)?.[0] ?? "";
+    // Must contain a regex test for formula-dangerous leading characters
+    expect(csvEscBody).toMatch(/\^?\[=\+\\-@/);
+    // Must prefix with a single quote
+    expect(csvEscBody).toMatch(/`'`|`'\$\{|'\$\{v\}/);
   });
 
   it("dateStr column (DD/MM/YYYY) is safe from formula injection", () => {

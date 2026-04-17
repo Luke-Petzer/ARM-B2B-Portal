@@ -12,7 +12,7 @@ vi.mock("@/lib/rate-limit", () => ({
   checkLoginRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfter: 0 }),
 }));
 vi.mock("next/headers", () => ({
-  headers: vi.fn().mockResolvedValue({ get: vi.fn().mockReturnValue(null) }),
+  headers: vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue(null) }),
   cookies: vi.fn(() => ({
     get: vi.fn(() => undefined),
     set: vi.fn(),
@@ -30,7 +30,10 @@ function mockSupabaseWithSignIn(
   (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
     auth: {
       signInWithPassword: vi.fn().mockResolvedValue(result),
-      getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId } : null } }),
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: userId ? { id: userId, email_confirmed_at: "2026-01-01T00:00:00Z" } : null },
+      }),
+      signOut: vi.fn().mockResolvedValue({}),
     },
   });
 }

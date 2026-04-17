@@ -31,10 +31,11 @@ function mockCookieStore(buyerCookie?: string) {
   } as any;
 }
 
-function mockSupabaseClient(user: { id: string; email: string } | null) {
+function mockSupabaseClient(user: { id: string; email: string; email_confirmed_at?: string } | null) {
   return {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user } }),
+      signOut: vi.fn().mockResolvedValue({}),
     },
   };
 }
@@ -61,7 +62,7 @@ describe("getSession: isBuyer for Supabase Auth users", () => {
   it("sets isBuyer=true and isAdmin=false for a buyer_default Supabase Auth user", async () => {
     const cookieStore = mockCookieStore(); // no custom buyer cookie
     (createClient as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockSupabaseClient({ id: "user-uuid-1", email: "buyer@example.com" })
+      mockSupabaseClient({ id: "user-uuid-1", email: "buyer@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" })
     );
     mockAdminClientProfile({
       id: "user-uuid-1",
@@ -81,7 +82,7 @@ describe("getSession: isBuyer for Supabase Auth users", () => {
   it("sets isBuyer=false and isAdmin=true for an admin Supabase Auth user", async () => {
     const cookieStore = mockCookieStore();
     (createClient as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockSupabaseClient({ id: "admin-uuid-1", email: "admin@example.com" })
+      mockSupabaseClient({ id: "admin-uuid-1", email: "admin@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" })
     );
     mockAdminClientProfile({
       id: "admin-uuid-1",

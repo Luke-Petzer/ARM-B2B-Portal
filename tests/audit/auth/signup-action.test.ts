@@ -8,6 +8,17 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   adminClient: { from: vi.fn() },
 }));
+vi.mock("@/lib/rate-limit", () => ({
+  checkLoginRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfter: 0 }),
+}));
+vi.mock("next/headers", () => ({
+  headers: vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue(null) }),
+  cookies: vi.fn(() => ({
+    get: vi.fn(() => undefined),
+    set: vi.fn(),
+    delete: vi.fn(),
+  })),
+}));
 
 import { signUpAction } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -57,16 +68,18 @@ describe("signUpAction", () => {
     expect(result?.error).toBeTruthy();
   });
 
-  it("redirects to dashboard on successful signup", async () => {
+  it("returns success (no error) on successful signup", async () => {
     mockSupabaseWithSignUp({ data: { user: { id: "new-uuid" } }, error: null });
     const fd = makeFormData({ contact_name: "John", email: "a@b.com", password: "password123" });
-    await expect(signUpAction(fd)).rejects.toThrow("REDIRECT:/dashboard");
+    const result = await signUpAction(fd);
+    expect(result?.error).toBeNull();
   });
 
   it("allows empty business name (individuals)", async () => {
     mockSupabaseWithSignUp({ data: { user: { id: "new-uuid" } }, error: null });
     const fd = makeFormData({ contact_name: "John", email: "a@b.com", password: "password123", business_name: "" });
     // Should not return a business name validation error
-    await expect(signUpAction(fd)).rejects.toThrow("REDIRECT:/dashboard");
+    const result = await signUpAction(fd);
+    expect(result?.error).toBeNull();
   });
 });

@@ -25,19 +25,21 @@ export default async function CartPage({ searchParams }: PageProps) {
   }[] = [];
 
   if (reorderId) {
-    const { data: order } = await adminClient
-      .from("orders")
-      .select("id")
-      .eq("id", reorderId)
-      .eq("profile_id", session.profileId)
-      .maybeSingle();
-
-    if (order) {
-      const { data: orderItems } = await adminClient
+    // Fetch order ownership check and items in parallel
+    const [{ data: order }, { data: orderItems }] = await Promise.all([
+      adminClient
+        .from("orders")
+        .select("id")
+        .eq("id", reorderId)
+        .eq("profile_id", session.profileId)
+        .maybeSingle(),
+      adminClient
         .from("order_items")
         .select("product_id, sku, product_name, unit_price, quantity")
-        .eq("order_id", reorderId);
+        .eq("order_id", reorderId),
+    ]);
 
+    if (order) {
       type RawItem = {
         product_id: string | null;
         sku: string;

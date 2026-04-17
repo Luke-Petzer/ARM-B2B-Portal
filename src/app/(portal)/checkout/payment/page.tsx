@@ -25,27 +25,27 @@ export default async function PaymentPage({ searchParams }: PageProps) {
   const { orderId } = await searchParams;
   if (!orderId) notFound();
 
-  // Fetch order + its items, scoped to this buyer
-  const { data: order } = await adminClient
-    .from("orders")
-    .select(
-      `id, reference_number, total_amount, subtotal, vat_amount, status,
-       order_items ( sku, product_name, unit_price, quantity, line_total )`
-    )
-    .eq("id", orderId)
-    .eq("profile_id", session.profileId)
-    .single();
+  // Fetch order + bank config in parallel
+  const [{ data: order }, { data: config }] = await Promise.all([
+    adminClient
+      .from("orders")
+      .select(
+        `id, reference_number, total_amount, subtotal, vat_amount, status,
+         order_items ( sku, product_name, unit_price, quantity, line_total )`
+      )
+      .eq("id", orderId)
+      .eq("profile_id", session.profileId)
+      .single(),
+    adminClient
+      .from("tenant_config")
+      .select(
+        "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_swift_code, bank_reference_prefix"
+      )
+      .eq("id", 1)
+      .single(),
+  ]);
 
   if (!order) notFound();
-
-  // Fetch bank details from tenant config
-  const { data: config } = await adminClient
-    .from("tenant_config")
-    .select(
-      "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_swift_code, bank_reference_prefix"
-    )
-    .eq("id", 1)
-    .single();
 
   const bankRef = `${config?.bank_reference_prefix ?? "INV"}-${order.reference_number}`;
 

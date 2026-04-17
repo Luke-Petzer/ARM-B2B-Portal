@@ -16,12 +16,12 @@ const bebasNeue = Bebas_Neue({
 const departments = [
   {
     number: '01',
-    name: 'Custom Steel Fabrication',
-    subtitle: 'Laser Cutting · CNC Bending · Custom Metalwork',
+    name: 'Carport & Outdoor Structures',
+    subtitle: 'Round & Square Poles · Washing Line Poles · Flashings · Truss Hangers · Bracing · Nail Plates',
     description:
-      'From concept to finished component — we cut, bend and fabricate structural steel to exact tolerances. Our CNC laser cutting and press braking capabilities handle complex geometries for bespoke industrial applications.',
-    image: '/image-1.webp',
-    imageAlt: 'Laser cutting steel in a manufacturing facility',
+      'Round and square carport poles in multiple diameters and thicknesses, plus washing line poles. Galvanised and treated for outdoor durability — supplied in bulk packs for trade and construction. Also includes essential structural hardware for commercial roofing and general construction: galvanised flashings, truss hangers, bracing straps, hoop iron and nail plates — built to last in demanding site conditions.',
+    image: '/image-6.webp',
+    imageAlt: 'Steel carport and outdoor structure poles',
   },
   {
     number: '02',
@@ -52,30 +52,21 @@ const departments = [
   },
   {
     number: '05',
-    name: 'Roofing & Construction',
-    subtitle: 'Flashings · Truss Hangers · Bracing · Nail Plates',
-    description:
-      'Essential structural hardware for commercial roofing and general construction. Galvanised flashings, truss hangers, bracing straps, hoop iron and nail plates — built to last in demanding site conditions.',
-    image: '/image-5.webp',
-    imageAlt: 'Roofing and construction steel hardware',
-  },
-  {
-    number: '06',
-    name: 'Carport & Outdoor Structures',
-    subtitle: 'Round & Square Poles · Washing Line Poles',
-    description:
-      'Round and square carport poles in multiple diameters and thicknesses, plus washing line poles. Galvanised and treated for outdoor durability — supplied in bulk packs for trade and construction.',
-    image: '/image-6.webp',
-    imageAlt: 'Steel carport and outdoor structure poles',
-  },
-  {
-    number: '07',
     name: 'Workshop & Welding Supplies',
     subtitle: 'Argo Welding Rods · Cutting Disks · Tools',
     description:
       'Professional-grade workshop essentials under the Argo range — welding rods in multiple weights, cutting disks in all standard sizes, and gate wheel kits. Reliable consumables for fabricators and contractors.',
     image: '/image-7.webp',
     imageAlt: 'Welding and workshop tools and supplies',
+  },
+  {
+    number: '06',
+    name: 'Custom Steel Fabrication',
+    subtitle: 'Laser Cutting · CNC Bending · Custom Metalwork',
+    description:
+      'From concept to finished component — we cut, bend and fabricate structural steel to exact tolerances. Our CNC laser cutting and press braking capabilities handle complex geometries for bespoke industrial applications.',
+    image: '/image-1.webp',
+    imageAlt: 'Laser cutting steel in a manufacturing facility',
   },
 ]
 

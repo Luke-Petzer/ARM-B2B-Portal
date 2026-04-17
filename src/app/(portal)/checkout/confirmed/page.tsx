@@ -24,26 +24,26 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
   const { orderId } = await searchParams;
   if (!orderId) notFound();
 
-  // Fetch order, scoped to this buyer
-  const { data: order } = await adminClient
-    .from("orders")
-    .select("id, reference_number, total_amount, payment_method, status, order_notes")
-    .eq("id", orderId)
-    .eq("profile_id", session.profileId)
-    .single();
+  // Fetch order + bank config in parallel
+  const [{ data: order }, { data: config }] = await Promise.all([
+    adminClient
+      .from("orders")
+      .select("id, reference_number, total_amount, payment_method, status, order_notes")
+      .eq("id", orderId)
+      .eq("profile_id", session.profileId)
+      .single(),
+    adminClient
+      .from("tenant_config")
+      .select(
+        "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_swift_code, bank_reference_prefix, email_from_address"
+      )
+      .eq("id", 1)
+      .single(),
+  ]);
 
   if (!order) notFound();
 
   const isEft = order.payment_method === "eft";
-
-  // Fetch bank details if needed (EFT buyers need to see them again)
-  const { data: config } = await adminClient
-    .from("tenant_config")
-    .select(
-      "business_name, bank_name, bank_account_holder, bank_account_number, bank_branch_code, bank_account_type, bank_swift_code, bank_reference_prefix, email_from_address"
-    )
-    .eq("id", 1)
-    .single();
 
   const bankRef = `${config?.bank_reference_prefix ?? "INV"}-${order.reference_number}`;
 
