@@ -13,10 +13,15 @@ function getLimiter(): Ratelimit {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-    // Graceful degradation: if Redis is not configured, skip rate limiting.
-    // Log the warning — do not block legitimate logins.
+    // [M1] In production, missing Redis config is a fatal misconfiguration.
+    // In development, fall through to a noop limiter.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in production."
+      );
+    }
     console.warn(
-      "[rate-limit] Upstash Redis env vars not set. Rate limiting is DISABLED."
+      "[rate-limit] Upstash Redis env vars not set. Rate limiting is DISABLED (dev only)."
     );
     return createNoopLimiter();
   }
@@ -50,8 +55,12 @@ export async function checkLoginRateLimit(
     const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
     return { allowed: false, retryAfter };
   } catch (err) {
-    // Redis error — log and allow the request through to avoid locking out users.
-    console.error("[rate-limit] Redis error, allowing request:", err);
+    // [M1] In production, Redis errors should fail-closed to prevent bypass.
+    // In development, allow through to avoid blocking developers.
+    console.error("[rate-limit] Redis error:", err);
+    if (process.env.NODE_ENV === "production") {
+      return { allowed: false, retryAfter: 30 };
+    }
     return { allowed: true };
   }
 }
