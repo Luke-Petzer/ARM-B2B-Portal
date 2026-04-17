@@ -1289,14 +1289,25 @@ export async function markOrderSettledAction(
 export async function bulkMarkOrdersSettledAction(
   orderIds: string[]
 ): Promise<{ error?: string; success?: boolean }> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  if (!orderIds.length) return { error: "No orders selected." };
+  // [M14] Only managers and super admins can bulk-settle
+  if (!session.isSuperAdmin && session.adminRole !== "manager") {
+    return { error: "Insufficient permissions." };
+  }
+
+  // [M14] Validate orderIds array: 1–500 UUIDs
+  const idsResult = z
+    .array(z.string().uuid())
+    .min(1, "No orders selected.")
+    .max(500, "Too many orders (max 500).")
+    .safeParse(orderIds);
+  if (!idsResult.success) return { error: idsResult.error.issues[0].message };
 
   const { error } = await adminClient
     .from("orders")
     .update({ payment_status: "paid" })
-    .in("id", orderIds);
+    .in("id", idsResult.data);
 
   if (error) return { error: error.message };
 
@@ -1317,11 +1328,16 @@ export async function sendClientStatementAction(
 ): Promise<{ error?: string; success?: boolean }> {
   await requireAdmin();
 
+  // [M14] UUID validation on profileId
+  const profileIdResult = z.string().uuid("Invalid client ID.").safeParse(profileId);
+  if (!profileIdResult.success) return { error: profileIdResult.error.issues[0].message };
+  const validProfileId = profileIdResult.data;
+
   // 1. Fetch profile
   const { data: profile } = await adminClient
     .from("profiles")
     .select("id, business_name, contact_name, email, account_number")
-    .eq("id", profileId)
+    .eq("id", validProfileId)
     .single();
 
   if (!profile) return { error: "Client not found." };
@@ -1334,7 +1350,7 @@ export async function sendClientStatementAction(
       `id, reference_number, created_at, confirmed_at, total_amount,
        order_items ( product_name, quantity, unit_price, line_total )`
     )
-    .eq("profile_id", profileId)
+    .eq("profile_id", validProfileId)
     .in("payment_status", ["unpaid", "credit_approved"])
     .not("confirmed_at", "is", null)
     .order("confirmed_at", { ascending: true });
