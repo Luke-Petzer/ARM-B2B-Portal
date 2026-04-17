@@ -100,6 +100,51 @@ export async function checkLoginRateLimit(
   }
 }
 
+// ── [M7] Per-session rate limit for mutations ─────────────────────────────
+
+let actionLimiter: Ratelimit | null = null;
+
+function getActionLimiter(): Ratelimit {
+  if (actionLimiter) return actionLimiter;
+
+  const config = getRedisConfig();
+  if (!config) return createNoopLimiter();
+
+  actionLimiter = new Ratelimit({
+    redis: new Redis(config),
+    limiter: Ratelimit.slidingWindow(30, "60 s"),
+    prefix: "portal:action",
+    analytics: false,
+  });
+
+  return actionLimiter;
+}
+
+/**
+ * Per-session rate limit for mutation actions (checkout, invoice, admin ops).
+ * 30 requests per 60s per profileId.
+ */
+export async function checkActionRateLimit(
+  profileId: string,
+  actionName: string
+): Promise<{ allowed: true } | { allowed: false; retryAfter: number }> {
+  try {
+    const limiter = getActionLimiter();
+    const result = await limiter.limit(`${actionName}:${profileId}`);
+
+    if (result.success) return { allowed: true };
+
+    const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
+    return { allowed: false, retryAfter };
+  } catch (err) {
+    console.error("[rate-limit] action limiter error:", err);
+    if (process.env.NODE_ENV === "production") {
+      return { allowed: false, retryAfter: 30 };
+    }
+    return { allowed: true };
+  }
+}
+
 // ── Noop limiter for local dev without Redis ───────────────────────────────
 
 function createNoopLimiter(): Ratelimit {

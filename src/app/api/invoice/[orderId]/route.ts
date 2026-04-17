@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { renderInvoiceToBuffer } from "@/lib/pdf/invoice";
+import { checkActionRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _req: NextRequest,
@@ -10,6 +11,15 @@ export async function GET(
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // [M7] Per-session rate limit on invoice generation
+  const rl = await checkActionRateLimit(session.profileId, "invoice");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Too many requests. Try again in ${rl.retryAfter}s.` },
+      { status: 429 }
+    );
   }
 
   const { orderId } = await params;

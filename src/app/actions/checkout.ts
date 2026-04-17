@@ -12,6 +12,7 @@ import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
+import { checkActionRateLimit } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -171,6 +172,12 @@ export async function checkoutAction(
   // 1. Authenticate
   const session = await getSession();
   if (!session) redirect("/login" as Route);
+
+  // [M7] Per-session rate limit on checkout
+  const rl = await checkActionRateLimit(session.profileId, "checkout");
+  if (!rl.allowed) {
+    return { error: `Too many requests. Please try again in ${rl.retryAfter} seconds.` };
+  }
 
   // [M6] Idempotency: validate and check for duplicate submissions
   let validSubmissionId: string | null = null;
