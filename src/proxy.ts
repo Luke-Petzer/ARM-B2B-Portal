@@ -9,7 +9,6 @@ const PUBLIC_ROUTES = ["/login", "/admin/login"];
 const ADMIN_PREFIX = "/admin";
 const PORTAL_PREFIXES = [
   "/cart",
-  "/catalogue",
   "/checkout",
   "/dashboard",
   "/order-sheet",

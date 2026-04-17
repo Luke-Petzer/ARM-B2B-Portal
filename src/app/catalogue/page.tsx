@@ -1,6 +1,5 @@
 import Image from "next/image";
-import { getSession } from "@/lib/auth/session";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 const TOTAL_PAGES = 11;
 
@@ -9,13 +8,24 @@ const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => {
   return { src: `/catalogue/page-${n}.webp`, alt: `Catalogue page ${i + 1}` };
 });
 
-export default async function CataloguePage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
+export default function CataloguePage() {
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+          <Link
+            href="/"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            &larr; Back
+          </Link>
+          <Link
+            href="/login"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            Login
+          </Link>
+        </div>
         {pages.map((page) => (
           <Image
             key={page.src}
