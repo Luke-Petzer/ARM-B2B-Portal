@@ -11,6 +11,7 @@ import DispatchNotification from "@/emails/DispatchNotification";
 import OrderApprovedNotification from "@/emails/OrderApprovedNotification";
 import { renderDispatchSheetToBuffer } from "@/lib/pdf/invoice";
 import type { Route } from "next";
+import { z } from "zod";
 import type { Database } from "@/lib/supabase/types";
 
 type OrderStatus = Database["public"]["Tables"]["orders"]["Row"]["status"];
@@ -725,6 +726,20 @@ export async function createProductAction(
     return { error: "SKU, name, and a valid price are required." };
   }
 
+  // [M11] Server-side bounds validation
+  if (name.length > 200) return { error: "Product name too long (max 200 characters)." };
+  if (details && details.length > 5000) return { error: "Details too long (max 5000 characters)." };
+  if (description && description.length > 2000) return { error: "Description too long (max 2000 characters)." };
+  if (!Number.isFinite(priceRaw) || priceRaw > 1e7) return { error: "Invalid price (max R10,000,000)." };
+  if (packSize > 10_000) return { error: "Pack size too large (max 10,000)." };
+  if (stockQty < 0 || stockQty > 10_000) return { error: "Stock quantity out of range (0–10,000)." };
+  if (costPrice !== null && (!Number.isFinite(costPrice) || costPrice < 0 || costPrice > 1e7))
+    return { error: "Invalid cost price." };
+  if (discountType === "percentage" && discountValue !== null && discountValue > 100)
+    return { error: "Percentage discount cannot exceed 100%." };
+  if (discountValue !== null && (!Number.isFinite(discountValue) || discountValue < 0))
+    return { error: "Discount value must be a non-negative number." };
+
   const categoryResult = await resolveOrCreateCategoryId(categoryIdRaw, newCategoryName);
   if ("error" in categoryResult) return categoryResult;
   const categoryId = categoryResult.id;
@@ -781,8 +796,10 @@ export async function updateProductAction(
 ): Promise<{ error: string } | void> {
   const session = await requireAdmin();
 
-  const id = formData.get("id") as string | null;
-  if (!id) return { error: "Missing product ID." };
+  const rawId = formData.get("id") as string | null;
+  const idResult = z.string().uuid("Invalid product ID.").safeParse(rawId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+  const id = idResult.data;
 
   const sku = ((formData.get("sku") as string) ?? "").trim();
   const name = ((formData.get("name") as string) ?? "").trim();
@@ -826,6 +843,20 @@ export async function updateProductAction(
   if (!sku || !name || isNaN(priceRaw) || priceRaw < 0) {
     return { error: "SKU, name, and a valid price are required." };
   }
+
+  // [M11] Server-side bounds validation
+  if (name.length > 200) return { error: "Product name too long (max 200 characters)." };
+  if (details && details.length > 5000) return { error: "Details too long (max 5000 characters)." };
+  if (description && description.length > 2000) return { error: "Description too long (max 2000 characters)." };
+  if (!Number.isFinite(priceRaw) || priceRaw > 1e7) return { error: "Invalid price (max R10,000,000)." };
+  if (packSize > 10_000) return { error: "Pack size too large (max 10,000)." };
+  if (stockQty < 0 || stockQty > 10_000) return { error: "Stock quantity out of range (0–10,000)." };
+  if (costPrice !== null && (!Number.isFinite(costPrice) || costPrice < 0 || costPrice > 1e7))
+    return { error: "Invalid cost price." };
+  if (discountType === "percentage" && discountValue !== null && discountValue > 100)
+    return { error: "Percentage discount cannot exceed 100%." };
+  if (discountValue !== null && (!Number.isFinite(discountValue) || discountValue < 0))
+    return { error: "Discount value must be a non-negative number." };
 
   const categoryResult = await resolveOrCreateCategoryId(categoryIdRaw, newCategoryName);
   if ("error" in categoryResult) return categoryResult;
