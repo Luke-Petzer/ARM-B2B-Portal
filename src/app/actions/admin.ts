@@ -80,6 +80,29 @@ async function resolveOrCreateCategoryId(
   return { id: categoryIdRaw };
 }
 
+// [M13] Employee scope check — employees can only mutate orders assigned
+// to them or unassigned. Managers and super admins bypass.
+async function checkEmployeeScope(
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
+  orderId: string
+): Promise<{ error: string } | null> {
+  if (session.isSuperAdmin || session.adminRole === "manager") return null;
+
+  const { data: order } = await adminClient
+    .from("orders")
+    .select("assigned_to")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Order not found." };
+
+  if (order.assigned_to && order.assigned_to !== session.profileId) {
+    return { error: "This order is assigned to another employee." };
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // assignOrderAction
 // ---------------------------------------------------------------------------
@@ -360,13 +383,18 @@ async function sendOrderApprovedEmail(orderId: string): Promise<void> {
 export async function approveOrderAction(
   formData: FormData
 ): Promise<{ error: string } | void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   // [L7] UUID validation on orderId
   const rawApproveOrderId = formData.get("orderId") as string | null;
   const approveIdResult = z.string().uuid("Invalid order ID.").safeParse(rawApproveOrderId);
   if (!approveIdResult.success) return { error: approveIdResult.error.issues[0].message };
   const orderId = approveIdResult.data;
+
+  // [M13] Employee-scoped RBAC
+  const scopeCheck = await checkEmployeeScope(session, orderId);
+  if (scopeCheck) return scopeCheck;
+
   const approvalTypeRaw = (formData.get("approvalType") as string | null) ?? "paid";
   if (approvalTypeRaw !== "paid" && approvalTypeRaw !== "credit_approved") {
     return { error: "Invalid approval type." };
@@ -440,13 +468,17 @@ export async function approveOrderAction(
 export async function cancelOrderAction(
   formData: FormData
 ): Promise<{ error: string } | void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   // [L7] UUID validation on orderId
   const rawCancelOrderId = formData.get("orderId") as string | null;
   const cancelIdResult = z.string().uuid("Invalid order ID.").safeParse(rawCancelOrderId);
   if (!cancelIdResult.success) return { error: cancelIdResult.error.issues[0].message };
   const orderId = cancelIdResult.data;
+
+  // [M13] Employee-scoped RBAC
+  const cancelScopeCheck = await checkEmployeeScope(session, orderId);
+  if (cancelScopeCheck) return cancelScopeCheck;
 
   const { data: currentOrder, error: fetchError } = await adminClient
     .from("orders")
