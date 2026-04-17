@@ -11,6 +11,7 @@ import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
+import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -259,6 +260,27 @@ export async function checkoutAction(
   const is30Day = session.role === "buyer_30_day";
   const paymentMethod = is30Day ? ("30_day_account" as const) : ("eft" as const);
   const initialStatus = "pending" as const;
+
+  // [M4] Credit limit enforcement for 30-day buyers.
+  // Check that outstanding + this order doesn't exceed credit limit.
+  if (is30Day) {
+    const creditStatus = await checkCreditStatus(session.profileId);
+    if (creditStatus.blocked) {
+      if (creditStatus.reason === "overdue") {
+        return { error: "You have overdue invoices. Please settle them before placing a new order." };
+      }
+      return { error: "This order would exceed your credit limit. Please contact your account manager." };
+    }
+    // Also check that adding this order's total wouldn't exceed the limit
+    if (creditStatus.creditLimit !== null) {
+      const projectedOutstanding = creditStatus.outstanding + totalAmount;
+      if (projectedOutstanding > creditStatus.creditLimit) {
+        return {
+          error: `This order (R${totalAmount.toFixed(2)}) would bring your outstanding balance to R${projectedOutstanding.toFixed(2)}, exceeding your credit limit of R${creditStatus.creditLimit.toFixed(2)}.`,
+        };
+      }
+    }
+  }
 
   // 7. Validate order notes
   if (orderNotes.length > 1000) {
