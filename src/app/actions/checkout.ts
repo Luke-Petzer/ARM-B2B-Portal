@@ -165,11 +165,32 @@ async function dispatchFulfillmentEmails(
  */
 export async function checkoutAction(
   rawItems: unknown,
-  orderNotes: string = ""
+  orderNotes: string = "",
+  clientSubmissionId?: string
 ): Promise<{ error: string } | void> {
   // 1. Authenticate
   const session = await getSession();
   if (!session) redirect("/login" as Route);
+
+  // [M6] Idempotency: validate and check for duplicate submissions
+  let validSubmissionId: string | null = null;
+  if (clientSubmissionId) {
+    const subIdResult = z.string().uuid().safeParse(clientSubmissionId);
+    if (subIdResult.success) {
+      validSubmissionId = subIdResult.data;
+      // Check if this submission ID already exists
+      const { data: existing } = await adminClient
+        .from("orders")
+        .select("id")
+        .eq("client_submission_id", validSubmissionId)
+        .maybeSingle();
+
+      if (existing) {
+        // Already processed — redirect to the existing order's confirmation
+        redirect(`/checkout/confirmed?orderId=${existing.id}` as Route);
+      }
+    }
+  }
 
   // Check buyer has at least one shipping address. Admins are exempt — only
   // buyers are required to provide a delivery address before placing an order.
@@ -330,6 +351,14 @@ export async function checkoutAction(
   if (rpcError || !newOrderId) {
     console.error("[checkout] create_order_atomic:", rpcError?.message);
     return { error: "Failed to create order. Please try again." };
+  }
+
+  // [M6] Stamp idempotency token onto the order (post-insert, non-blocking)
+  if (validSubmissionId) {
+    await adminClient
+      .from("orders")
+      .update({ client_submission_id: validSubmissionId } as Record<string, unknown>)
+      .eq("id", newOrderId);
   }
 
   // 10. Fetch the full order row and items for PDF / email dispatch
