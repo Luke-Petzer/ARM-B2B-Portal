@@ -1,13 +1,11 @@
 import "server-only";
-import { SignJWT, jwtVerify } from "jose";
+import { jwtVerify } from "jose";
 import { z } from "zod";
 import type { AppRole } from "@/lib/supabase/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 export const BUYER_SESSION_COOKIE = "sb-buyer-session";
-const SESSION_DURATION_SECONDS = 60 * 60 * 24; // 24 hours
-
 function getJwtSecret(): Uint8Array {
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) throw new Error("Missing env var: SUPABASE_JWT_SECRET");
@@ -38,36 +36,6 @@ export interface BuyerSessionPayload {
   profileId: string;
   role: AppRole;
   accountNumber: string;
-}
-
-// ── JWT creation ───────────────────────────────────────────────────────────
-
-/**
- * Creates a signed JWT compatible with Supabase's auth.uid() resolution.
- *
- * Critical claims:
- *   sub        = profile.id  → Supabase resolves auth.uid() from this
- *   role       = "authenticated" → Required for RLS policies to activate
- *   aud        = "authenticated" → Required by Supabase JWT validation
- *   app_role   = buyer role  → Read by get_app_role() SQL helper
- */
-export async function createBuyerSession(
-  payload: BuyerSessionPayload
-): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-
-  return new SignJWT({
-    sub: payload.profileId,
-    role: "authenticated",
-    aud: "authenticated",
-    iss: "supabase",
-    app_role: payload.role,
-    account_number: payload.accountNumber,
-    iat: now,
-    exp: now + SESSION_DURATION_SECONDS,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .sign(getJwtSecret());
 }
 
 // ── JWT verification ───────────────────────────────────────────────────────
@@ -107,12 +75,3 @@ export async function verifyBuyerSession(
   }
 }
 
-// ── Cookie options ─────────────────────────────────────────────────────────
-
-export const buyerSessionCookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
-  path: "/",
-  maxAge: SESSION_DURATION_SECONDS,
-};
