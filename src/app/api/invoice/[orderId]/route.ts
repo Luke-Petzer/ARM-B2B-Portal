@@ -14,6 +14,12 @@ export async function GET(
 
   const { orderId } = await params;
 
+  // [L5] Validate orderId is a valid UUID before querying
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(orderId)) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
+
   // Fetch order scoped to this buyer
   const { data: order } = await adminClient
     .from("orders")
