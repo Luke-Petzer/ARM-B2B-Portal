@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 
@@ -13,8 +14,11 @@ export async function reorderAction(formData: FormData) {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const orderId = formData.get("orderId") as string;
-  if (!orderId) return;
+  // [L7] UUID validation on orderId
+  const rawOrderId = formData.get("orderId") as string;
+  const orderIdResult = z.string().uuid().safeParse(rawOrderId);
+  if (!orderIdResult.success) return;
+  const orderId = orderIdResult.data;
 
   // Verify order belongs to this buyer
   const { data: order } = await adminClient

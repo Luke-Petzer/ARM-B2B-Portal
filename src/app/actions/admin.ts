@@ -93,8 +93,11 @@ export async function assignOrderAction(
 ): Promise<{ error: string } | void> {
   const session = await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [L7] UUID validation on orderId
+  const rawOrderId = formData.get("orderId") as string | null;
+  const orderIdResult = z.string().uuid("Invalid order ID.").safeParse(rawOrderId);
+  if (!orderIdResult.success) return { error: orderIdResult.error.issues[0].message };
+  const orderId = orderIdResult.data;
 
   const { data, error } = await adminClient
     .from("orders")
@@ -359,9 +362,12 @@ export async function approveOrderAction(
 ): Promise<{ error: string } | void> {
   await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
+  // [L7] UUID validation on orderId
+  const rawApproveOrderId = formData.get("orderId") as string | null;
+  const approveIdResult = z.string().uuid("Invalid order ID.").safeParse(rawApproveOrderId);
+  if (!approveIdResult.success) return { error: approveIdResult.error.issues[0].message };
+  const orderId = approveIdResult.data;
   const approvalTypeRaw = (formData.get("approvalType") as string | null) ?? "paid";
-  if (!orderId) return { error: "Missing order ID." };
   if (approvalTypeRaw !== "paid" && approvalTypeRaw !== "credit_approved") {
     return { error: "Invalid approval type." };
   }
@@ -436,8 +442,11 @@ export async function cancelOrderAction(
 ): Promise<{ error: string } | void> {
   await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [L7] UUID validation on orderId
+  const rawCancelOrderId = formData.get("orderId") as string | null;
+  const cancelIdResult = z.string().uuid("Invalid order ID.").safeParse(rawCancelOrderId);
+  if (!cancelIdResult.success) return { error: cancelIdResult.error.issues[0].message };
+  const orderId = cancelIdResult.data;
 
   const { data: currentOrder, error: fetchError } = await adminClient
     .from("orders")
@@ -1226,10 +1235,14 @@ export async function markOrderSettledAction(
 ): Promise<{ error?: string; success?: boolean }> {
   await requireAdmin();
 
+  // [L7] UUID validation on orderId
+  const idResult = z.string().uuid("Invalid order ID.").safeParse(orderId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+
   const { error } = await adminClient
     .from("orders")
     .update({ payment_status: "paid" })
-    .eq("id", orderId);
+    .eq("id", idResult.data);
 
   if (error) return { error: error.message };
 
