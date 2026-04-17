@@ -609,24 +609,47 @@ export async function uploadProductImageAction(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { error: "No file provided." };
 
-  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+  // [H3] Server-side size limit — 2 MB max
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  if (file.size > MAX_FILE_SIZE) {
+    return { error: "File exceeds 2 MB limit." };
+  }
+
+  // [H3] Magic-byte validation — never trust client MIME type or filename
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const header = buffer.subarray(0, 12);
+
+  type MagicEntry = { magic: number[]; offset: number; ext: string; mime: string };
+  const MAGIC_TABLE: MagicEntry[] = [
+    { magic: [0xFF, 0xD8, 0xFF],             offset: 0, ext: "jpg",  mime: "image/jpeg" },
+    { magic: [0x89, 0x50, 0x4E, 0x47],       offset: 0, ext: "png",  mime: "image/png"  },
+    { magic: [0x52, 0x49, 0x46, 0x46],       offset: 0, ext: "webp", mime: "image/webp" }, // RIFF....WEBP
+  ];
+
+  const matched = MAGIC_TABLE.find((entry) =>
+    entry.magic.every((byte, i) => header[entry.offset + i] === byte)
+  );
+
+  // For WebP, also verify the WEBP signature at bytes 8-11
+  if (matched?.ext === "webp") {
+    const webpSig = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+    const isWebp = webpSig.every((byte, i) => header[8 + i] === byte);
+    if (!isWebp) return { error: "Only JPEG, PNG, and WebP images are allowed." };
+  }
+
+  if (!matched) {
     return { error: "Only JPEG, PNG, and WebP images are allowed." };
   }
 
-  // Sanitise filename and make it unique
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  // [H3] Server-generated extension from magic bytes — ignore client filename
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${matched.ext}`;
   const filePath = `products/${uniqueName}`;
-
-  // Convert File to ArrayBuffer for the server-side upload
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
   const { error: uploadError } = await adminClient.storage
     .from("product-images")
     .upload(filePath, buffer, {
-      contentType: file.type,
+      contentType: matched.mime, // [H3] Use verified MIME from magic bytes
       upsert: true,
     });
 
