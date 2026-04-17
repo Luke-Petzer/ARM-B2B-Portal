@@ -23,7 +23,7 @@ const CartItemSchema = z.object({
   // coerce handles the edge case where React's Server Action serialization
   // delivers a numeric string instead of a JS number
   unitPrice: z.coerce.number().nonnegative(),
-  quantity: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().int().positive().max(10_000, "Quantity too large (max 10,000)"), // [L1]
   primaryImageUrl: z.string().nullable().optional(),
   variantInfo: z
     .object({ label: z.string(), value: z.string() })
