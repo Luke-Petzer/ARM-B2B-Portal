@@ -70,6 +70,18 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
+    // [H5] Verify admin role via JWT app_role claim (set by custom_access_token_hook).
+    // Without this, any self-signup buyer who has a Supabase Auth session could
+    // access /admin/* pages.
+    const { data: { session: authSession } } = await supabase.auth.getSession();
+    const appRole = (authSession?.access_token
+      ? JSON.parse(atob(authSession.access_token.split(".")[1]))?.app_role
+      : null) as string | null;
+
+    if (appRole !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     return response;
   }
 
