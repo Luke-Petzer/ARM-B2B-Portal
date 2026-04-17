@@ -5,16 +5,14 @@ import { Redis } from "@upstash/redis";
 // 5 login attempts per 60-second sliding window per IP.
 // Protects the buyer account number endpoint from brute-force enumeration.
 let buyerLoginLimiter: Ratelimit | null = null;
+// [M2] 10 attempts per hour per email — slower bucket to catch credential stuffing
+let emailLoginLimiter: Ratelimit | null = null;
 
-function getLimiter(): Ratelimit {
-  if (buyerLoginLimiter) return buyerLoginLimiter;
-
+function getRedisConfig(): { url: string; token: string } | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
   if (!url || !token) {
     // [M1] In production, missing Redis config is a fatal misconfiguration.
-    // In development, fall through to a noop limiter.
     if (process.env.NODE_ENV === "production") {
       throw new Error(
         "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in production."
@@ -23,17 +21,41 @@ function getLimiter(): Ratelimit {
     console.warn(
       "[rate-limit] Upstash Redis env vars not set. Rate limiting is DISABLED (dev only)."
     );
-    return createNoopLimiter();
+    return null;
   }
+  return { url, token };
+}
+
+function getLimiter(): Ratelimit {
+  if (buyerLoginLimiter) return buyerLoginLimiter;
+
+  const config = getRedisConfig();
+  if (!config) return createNoopLimiter();
 
   buyerLoginLimiter = new Ratelimit({
-    redis: new Redis({ url, token }),
+    redis: new Redis(config),
     limiter: Ratelimit.slidingWindow(5, "60 s"),
     prefix: "portal:login",
     analytics: false,
   });
 
   return buyerLoginLimiter;
+}
+
+function getEmailLimiter(): Ratelimit {
+  if (emailLoginLimiter) return emailLoginLimiter;
+
+  const config = getRedisConfig();
+  if (!config) return createNoopLimiter();
+
+  emailLoginLimiter = new Ratelimit({
+    redis: new Redis(config),
+    limiter: Ratelimit.slidingWindow(10, "3600 s"),
+    prefix: "portal:login:email",
+    analytics: false,
+  });
+
+  return emailLoginLimiter;
 }
 
 /**
@@ -44,16 +66,29 @@ function getLimiter(): Ratelimit {
  *          `{ allowed: false, retryAfter: number }` if it should be blocked.
  */
 export async function checkLoginRateLimit(
-  identifier: string
+  identifier: string,
+  email?: string
 ): Promise<{ allowed: true } | { allowed: false; retryAfter: number }> {
   try {
     const limiter = getLimiter();
     const result = await limiter.limit(identifier);
 
-    if (result.success) return { allowed: true };
+    if (!result.success) {
+      const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
+      return { allowed: false, retryAfter };
+    }
 
-    const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
-    return { allowed: false, retryAfter };
+    // [M2] Per-email secondary bucket (10 attempts/hour)
+    if (email) {
+      const emailLim = getEmailLimiter();
+      const emailResult = await emailLim.limit(email.toLowerCase());
+      if (!emailResult.success) {
+        const retryAfter = Math.ceil((emailResult.reset - Date.now()) / 1000);
+        return { allowed: false, retryAfter };
+      }
+    }
+
+    return { allowed: true };
   } catch (err) {
     // [M1] In production, Redis errors should fail-closed to prevent bypass.
     // In development, allow through to avoid blocking developers.

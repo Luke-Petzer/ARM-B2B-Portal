@@ -58,7 +58,7 @@ export async function loginAction(
     headerStore.get("x-real-ip")?.trim() ||
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
-  const rateLimit = await checkLoginRateLimit(ip);
+  const rateLimit = await checkLoginRateLimit(ip, email); // [M2] per-email bucket
   if (!rateLimit.allowed) {
     return {
       error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
@@ -237,7 +237,7 @@ export async function adminLoginAction(
     headerStore.get("x-real-ip")?.trim() ||
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
-  const rateLimit = await checkLoginRateLimit(`admin:${ip}`);
+  const rateLimit = await checkLoginRateLimit(`admin:${ip}`, email); // [M2] per-email bucket
   if (!rateLimit.allowed) {
     return {
       error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
