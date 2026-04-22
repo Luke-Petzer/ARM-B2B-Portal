@@ -5,6 +5,7 @@ import { redirect, notFound } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import { AlertCircle } from "lucide-react";
 import PaymentForm from "./PaymentForm";
+import CoolingOffNotice from "@/components/CoolingOffNotice";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -219,6 +220,9 @@ export default async function PaymentPage({ searchParams }: PageProps) {
                 When making your EFT, use <strong>{bankRef}</strong> as your payment reference so we can match your transfer.
               </p>
             </div>
+
+            {/* ECT Act Section 44 cooling-off disclosure */}
+            <CoolingOffNotice />
 
             {/* Submit form */}
             <PaymentForm orderId={order.id} bankRef={bankRef} />
