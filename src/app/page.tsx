@@ -265,7 +265,7 @@ export default function LandingPage() {
       {/* ── FOOTER ── */}
       <footer id="footer" className="bg-[#03080c] border-t border-white/[0.05] pt-20 pb-10">
         <div className="max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
 
             {/* Brand */}
             <div>
@@ -276,10 +276,15 @@ export default function LandingPage() {
                 width={150}
                 className="object-contain mb-5 max-w-[120px]"
               />
-              <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
+              <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs mb-5">
                 Precision-manufactured steel products and hardware for the
                 construction, security and fabrication industries.
               </p>
+              <div className="font-inter text-xs text-white/20 space-y-1">
+                <p>AR Steel Manufacturing (Pty) Ltd</p>
+                <p>CIPC Reg: [TO BE PROVIDED]</p>
+                <p>VAT No: [TO BE PROVIDED]</p>
+              </div>
             </div>
 
             {/* Quick Links */}
@@ -297,8 +302,42 @@ export default function LandingPage() {
                   </a>
                 </li>
                 <li>
+                  <Link href="/catalogue" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Catalogue
+                  </Link>
+                </li>
+                <li>
                   <Link href="/login" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
                     Login
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-bebas text-white tracking-widest text-lg mb-6 border-l-2 border-white/15 pl-3">
+                Legal
+              </h4>
+              <ul className="space-y-3 font-inter text-sm text-white/40">
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Terms &amp; Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#privacy" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#returns" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Returns &amp; Refunds
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#delivery" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Delivery Terms
                   </Link>
                 </li>
               </ul>
