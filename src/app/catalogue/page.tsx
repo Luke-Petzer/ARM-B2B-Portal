@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import NavBar from "@/components/portal/NavBar";
+import PublicNavBar from "@/components/PublicNavBar";
 import { adminClient } from "@/lib/supabase/admin";
 import type { AppRole } from "@/lib/supabase/types";
 
@@ -33,35 +33,10 @@ export default async function CataloguePage() {
           businessName={businessName}
         />
       ) : (
-        <nav className="h-[72px] border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-50">
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/logo.png"
-              alt="AR Steel Manufacturing"
-              height={52}
-              width={115}
-              priority
-              className="object-contain"
-            />
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors hidden md:block"
-            >
-              Home
-            </Link>
-            <Link
-              href="/login"
-              className="text-sm font-semibold px-5 py-2 border border-gray-200 rounded text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Login
-            </Link>
-          </div>
-        </nav>
+        <PublicNavBar activeItem="catalogue" />
       )}
 
-      <div className="flex-1">
+      <div className={`flex-1 ${!session ? "pt-[72px]" : ""}`}>
         <div className="max-w-4xl mx-auto">
           {pages.map((page) => (
             <Image
