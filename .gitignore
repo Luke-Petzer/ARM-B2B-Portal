@@ -42,3 +42,6 @@ next-env.d.ts
 
 # loose PDF files at root (use public/ instead)
 /*.pdf
+
+# [H6] local test-seeding SQL — contains hard-coded credentials, never commit
+/supabase/scripts/

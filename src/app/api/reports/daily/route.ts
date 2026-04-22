@@ -18,6 +18,12 @@ export async function GET(req: Request): Promise<NextResponse> {
   let date: Date;
   if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
     date = new Date(`${dateParam}T00:00:00.000Z`);
+    // [L6] Reject invalid dates (e.g. 2026-02-31 passes the regex but isNaN)
+    if (isNaN(date.getTime())) {
+      return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+    }
+  } else if (dateParam) {
+    return NextResponse.json({ error: "Invalid date format (expected YYYY-MM-DD)" }, { status: 400 });
   } else {
     date = new Date();
   }

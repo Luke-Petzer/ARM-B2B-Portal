@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { adminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -53,6 +54,26 @@ export default async function PortalLayout({
       <div className="flex-1 overflow-hidden flex flex-col">
         {children}
       </div>
+      {/* Utility footer — legal links */}
+      <footer className="flex-shrink-0 border-t border-gray-100 bg-white px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p className="text-[11px] text-gray-400">
+          &copy; {new Date().getFullYear()} AR Steel Manufacturing (Pty) Ltd
+        </p>
+        <nav className="flex items-center gap-4 text-[11px] text-gray-400">
+          <Link href="/terms" className="hover:text-gray-600 transition-colors">
+            Terms
+          </Link>
+          <Link href="/terms#privacy" className="hover:text-gray-600 transition-colors">
+            Privacy
+          </Link>
+          <Link href="/terms#returns" className="hover:text-gray-600 transition-colors">
+            Returns
+          </Link>
+          <Link href="/terms#delivery" className="hover:text-gray-600 transition-colors">
+            Delivery
+          </Link>
+        </nav>
+      </footer>
     </div>
   );
 }

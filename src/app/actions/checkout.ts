@@ -11,6 +11,8 @@ import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
+import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
+import { checkActionRateLimit } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -23,7 +25,7 @@ const CartItemSchema = z.object({
   // coerce handles the edge case where React's Server Action serialization
   // delivers a numeric string instead of a JS number
   unitPrice: z.coerce.number().nonnegative(),
-  quantity: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().int().positive().max(10_000, "Quantity too large (max 10,000)"), // [L1]
   primaryImageUrl: z.string().nullable().optional(),
   variantInfo: z
     .object({ label: z.string(), value: z.string() })
@@ -164,11 +166,38 @@ async function dispatchFulfillmentEmails(
  */
 export async function checkoutAction(
   rawItems: unknown,
-  orderNotes: string = ""
+  orderNotes: string = "",
+  clientSubmissionId?: string
 ): Promise<{ error: string } | void> {
   // 1. Authenticate
   const session = await getSession();
   if (!session) redirect("/login" as Route);
+
+  // [M7] Per-session rate limit on checkout
+  const rl = await checkActionRateLimit(session.profileId, "checkout");
+  if (!rl.allowed) {
+    return { error: `Too many requests. Please try again in ${rl.retryAfter} seconds.` };
+  }
+
+  // [M6] Idempotency: validate and check for duplicate submissions
+  let validSubmissionId: string | null = null;
+  if (clientSubmissionId) {
+    const subIdResult = z.string().uuid().safeParse(clientSubmissionId);
+    if (subIdResult.success) {
+      validSubmissionId = subIdResult.data;
+      // Check if this submission ID already exists
+      const { data: existing } = await adminClient
+        .from("orders")
+        .select("id")
+        .eq("client_submission_id", validSubmissionId)
+        .maybeSingle();
+
+      if (existing) {
+        // Already processed — redirect to the existing order's confirmation
+        redirect(`/checkout/confirmed?orderId=${existing.id}` as Route);
+      }
+    }
+  }
 
   // Check buyer has at least one shipping address. Admins are exempt — only
   // buyers are required to provide a delivery address before placing an order.
@@ -260,6 +289,27 @@ export async function checkoutAction(
   const paymentMethod = is30Day ? ("30_day_account" as const) : ("eft" as const);
   const initialStatus = "pending" as const;
 
+  // [M4] Credit limit enforcement for 30-day buyers.
+  // Check that outstanding + this order doesn't exceed credit limit.
+  if (is30Day) {
+    const creditStatus = await checkCreditStatus(session.profileId);
+    if (creditStatus.blocked) {
+      if (creditStatus.reason === "overdue") {
+        return { error: "You have overdue invoices. Please settle them before placing a new order." };
+      }
+      return { error: "This order would exceed your credit limit. Please contact your account manager." };
+    }
+    // Also check that adding this order's total wouldn't exceed the limit
+    if (creditStatus.creditLimit !== null) {
+      const projectedOutstanding = creditStatus.outstanding + totalAmount;
+      if (projectedOutstanding > creditStatus.creditLimit) {
+        return {
+          error: `This order (R${totalAmount.toFixed(2)}) would bring your outstanding balance to R${projectedOutstanding.toFixed(2)}, exceeding your credit limit of R${creditStatus.creditLimit.toFixed(2)}.`,
+        };
+      }
+    }
+  }
+
   // 7. Validate order notes
   if (orderNotes.length > 1000) {
     return { error: "Order notes must be 1000 characters or fewer." };
@@ -308,6 +358,14 @@ export async function checkoutAction(
   if (rpcError || !newOrderId) {
     console.error("[checkout] create_order_atomic:", rpcError?.message);
     return { error: "Failed to create order. Please try again." };
+  }
+
+  // [M6] Stamp idempotency token onto the order (post-insert, non-blocking)
+  if (validSubmissionId) {
+    await adminClient
+      .from("orders")
+      .update({ client_submission_id: validSubmissionId } as Record<string, unknown>)
+      .eq("id", newOrderId);
   }
 
   // 10. Fetch the full order row and items for PDF / email dispatch
@@ -367,21 +425,44 @@ export async function markPaymentSubmittedAction(
   const session = await getSession();
   if (!session) redirect("/login" as Route);
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [M5] Validate orderId as UUID and buyer_reference length
+  const rawOrderId = formData.get("orderId") as string | null;
+  const orderIdResult = z.string().uuid("Invalid order ID.").safeParse(rawOrderId);
+  if (!orderIdResult.success) return { error: orderIdResult.error.issues[0].message };
+  const orderId = orderIdResult.data;
 
-  const buyerReference = (formData.get("buyer_reference") as string | null)?.trim() || null;
+  const rawRef = (formData.get("buyer_reference") as string | null)?.trim() || null;
+  if (rawRef && rawRef.length > 100) return { error: "Reference too long (max 100 characters)." };
+  const buyerReference = rawRef;
 
   // Verify this order belongs to the authenticated buyer
   const { data: order, error: fetchError } = await adminClient
     .from("orders")
-    .select("id, total_amount, payment_method, profile_id")
+    .select("id, total_amount, payment_method, profile_id, status")
     .eq("id", orderId)
     .eq("profile_id", session.profileId)
     .single();
 
   if (fetchError || !order) {
     return { error: "Order not found." };
+  }
+
+  // [M5] Only allow payment submission on pending orders
+  if (order.status !== "pending") {
+    return { error: "Payment can only be submitted for pending orders." };
+  }
+
+  // [M5] Reject if there's already a pending payment for this order
+  const { data: existingPayment } = await adminClient
+    .from("payments")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("status", "pending")
+    .limit(1)
+    .maybeSingle();
+
+  if (existingPayment) {
+    return { error: "A payment submission is already pending for this order." };
   }
 
   // Save PO number to buyer_reference if supplied

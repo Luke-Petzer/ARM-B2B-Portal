@@ -3,7 +3,28 @@
     "allow": [
       "Bash(cat /Users/lukepetzer/LP-Web-Studio/Clients/Rasheed-B2B/Codebase/rasheed-ordering-portal/src/lib/auth*.ts)",
       "Bash(python3 /Users/lukepetzer/.claude/skills/ui-ux-pro-max/scripts/search.py \"mobile touch animation dark fixed navbar\" --domain ux)",
-      "Bash(python3 /Users/lukepetzer/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark industrial brutalist tech-noir\" --domain style)"
+      "Bash(python3 /Users/lukepetzer/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark industrial brutalist tech-noir\" --domain style)",
+      "Bash(supabase status:*)",
+      "Bash(grep -n \"SET search_path\" supabase/init.sql supabase/migrations/*.sql)",
+      "Bash(grep -rn \"buyer_sessions\\\\|CREATE TABLE public.buyer_sessions\" supabase/init.sql supabase/migrations/*.sql)",
+      "Bash(supabase --version)",
+      "Bash(supabase projects *)",
+      "Bash(supabase link *)",
+      "Bash(supabase db *)",
+      "Bash(claude mcp *)",
+      "Bash(PORT=3847 npm run dev)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/register)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/catalogue)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/terms)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/forgot-password)",
+      "Bash(curl -s http://localhost:3847/)",
+      "Bash(kill %1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/cart)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3847/dashboard)",
+      "Bash(curl -s http://localhost:3847/catalogue)",
+      "Bash(npx eslint *)"
     ]
   }
 }

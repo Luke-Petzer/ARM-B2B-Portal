@@ -11,6 +11,7 @@ import DispatchNotification from "@/emails/DispatchNotification";
 import OrderApprovedNotification from "@/emails/OrderApprovedNotification";
 import { renderDispatchSheetToBuffer } from "@/lib/pdf/invoice";
 import type { Route } from "next";
+import { z } from "zod";
 import type { Database } from "@/lib/supabase/types";
 
 type OrderStatus = Database["public"]["Tables"]["orders"]["Row"]["status"];
@@ -79,6 +80,29 @@ async function resolveOrCreateCategoryId(
   return { id: categoryIdRaw };
 }
 
+// [M13] Employee scope check — employees can only mutate orders assigned
+// to them or unassigned. Managers and super admins bypass.
+async function checkEmployeeScope(
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
+  orderId: string
+): Promise<{ error: string } | null> {
+  if (session.isSuperAdmin || session.adminRole === "manager") return null;
+
+  const { data: order } = await adminClient
+    .from("orders")
+    .select("assigned_to")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Order not found." };
+
+  if (order.assigned_to && order.assigned_to !== session.profileId) {
+    return { error: "This order is assigned to another employee." };
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // assignOrderAction
 // ---------------------------------------------------------------------------
@@ -92,8 +116,11 @@ export async function assignOrderAction(
 ): Promise<{ error: string } | void> {
   const session = await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [L7] UUID validation on orderId
+  const rawOrderId = formData.get("orderId") as string | null;
+  const orderIdResult = z.string().uuid("Invalid order ID.").safeParse(rawOrderId);
+  if (!orderIdResult.success) return { error: orderIdResult.error.issues[0].message };
+  const orderId = orderIdResult.data;
 
   const { data, error } = await adminClient
     .from("orders")
@@ -356,11 +383,19 @@ async function sendOrderApprovedEmail(orderId: string): Promise<void> {
 export async function approveOrderAction(
   formData: FormData
 ): Promise<{ error: string } | void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
+  // [L7] UUID validation on orderId
+  const rawApproveOrderId = formData.get("orderId") as string | null;
+  const approveIdResult = z.string().uuid("Invalid order ID.").safeParse(rawApproveOrderId);
+  if (!approveIdResult.success) return { error: approveIdResult.error.issues[0].message };
+  const orderId = approveIdResult.data;
+
+  // [M13] Employee-scoped RBAC
+  const scopeCheck = await checkEmployeeScope(session, orderId);
+  if (scopeCheck) return scopeCheck;
+
   const approvalTypeRaw = (formData.get("approvalType") as string | null) ?? "paid";
-  if (!orderId) return { error: "Missing order ID." };
   if (approvalTypeRaw !== "paid" && approvalTypeRaw !== "credit_approved") {
     return { error: "Invalid approval type." };
   }
@@ -433,10 +468,17 @@ export async function approveOrderAction(
 export async function cancelOrderAction(
   formData: FormData
 ): Promise<{ error: string } | void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const orderId = formData.get("orderId") as string | null;
-  if (!orderId) return { error: "Missing order ID." };
+  // [L7] UUID validation on orderId
+  const rawCancelOrderId = formData.get("orderId") as string | null;
+  const cancelIdResult = z.string().uuid("Invalid order ID.").safeParse(rawCancelOrderId);
+  if (!cancelIdResult.success) return { error: cancelIdResult.error.issues[0].message };
+  const orderId = cancelIdResult.data;
+
+  // [M13] Employee-scoped RBAC
+  const cancelScopeCheck = await checkEmployeeScope(session, orderId);
+  if (cancelScopeCheck) return cancelScopeCheck;
 
   const { data: currentOrder, error: fetchError } = await adminClient
     .from("orders")
@@ -583,10 +625,17 @@ export async function exportOrdersCsvAction(
 }
 
 function csvEsc(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // [M10] Neutralise CSV formula injection (CWE-1236): prefix dangerous
+  // leading characters with a single quote so spreadsheet apps treat the
+  // cell as a literal string instead of a formula.
+  let v = value;
+  if (/^[=+\-@\t\r]/.test(v)) {
+    v = `'${v}`;
   }
-  return value;
+  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("'")) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
 }
 
 // ---------------------------------------------------------------------------
@@ -609,24 +658,47 @@ export async function uploadProductImageAction(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { error: "No file provided." };
 
-  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+  // [H3] Server-side size limit — 2 MB max
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  if (file.size > MAX_FILE_SIZE) {
+    return { error: "File exceeds 2 MB limit." };
+  }
+
+  // [H3] Magic-byte validation — never trust client MIME type or filename
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const header = buffer.subarray(0, 12);
+
+  type MagicEntry = { magic: number[]; offset: number; ext: string; mime: string };
+  const MAGIC_TABLE: MagicEntry[] = [
+    { magic: [0xFF, 0xD8, 0xFF],             offset: 0, ext: "jpg",  mime: "image/jpeg" },
+    { magic: [0x89, 0x50, 0x4E, 0x47],       offset: 0, ext: "png",  mime: "image/png"  },
+    { magic: [0x52, 0x49, 0x46, 0x46],       offset: 0, ext: "webp", mime: "image/webp" }, // RIFF....WEBP
+  ];
+
+  const matched = MAGIC_TABLE.find((entry) =>
+    entry.magic.every((byte, i) => header[entry.offset + i] === byte)
+  );
+
+  // For WebP, also verify the WEBP signature at bytes 8-11
+  if (matched?.ext === "webp") {
+    const webpSig = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+    const isWebp = webpSig.every((byte, i) => header[8 + i] === byte);
+    if (!isWebp) return { error: "Only JPEG, PNG, and WebP images are allowed." };
+  }
+
+  if (!matched) {
     return { error: "Only JPEG, PNG, and WebP images are allowed." };
   }
 
-  // Sanitise filename and make it unique
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  // [H3] Server-generated extension from magic bytes — ignore client filename
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${matched.ext}`;
   const filePath = `products/${uniqueName}`;
-
-  // Convert File to ArrayBuffer for the server-side upload
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
   const { error: uploadError } = await adminClient.storage
     .from("product-images")
     .upload(filePath, buffer, {
-      contentType: file.type,
+      contentType: matched.mime, // [H3] Use verified MIME from magic bytes
       upsert: true,
     });
 
@@ -695,6 +767,20 @@ export async function createProductAction(
     return { error: "SKU, name, and a valid price are required." };
   }
 
+  // [M11] Server-side bounds validation
+  if (name.length > 200) return { error: "Product name too long (max 200 characters)." };
+  if (details && details.length > 5000) return { error: "Details too long (max 5000 characters)." };
+  if (description && description.length > 2000) return { error: "Description too long (max 2000 characters)." };
+  if (!Number.isFinite(priceRaw) || priceRaw > 1e7) return { error: "Invalid price (max R10,000,000)." };
+  if (packSize > 10_000) return { error: "Pack size too large (max 10,000)." };
+  if (stockQty < 0 || stockQty > 10_000) return { error: "Stock quantity out of range (0–10,000)." };
+  if (costPrice !== null && (!Number.isFinite(costPrice) || costPrice < 0 || costPrice > 1e7))
+    return { error: "Invalid cost price." };
+  if (discountType === "percentage" && discountValue !== null && discountValue > 100)
+    return { error: "Percentage discount cannot exceed 100%." };
+  if (discountValue !== null && (!Number.isFinite(discountValue) || discountValue < 0))
+    return { error: "Discount value must be a non-negative number." };
+
   const categoryResult = await resolveOrCreateCategoryId(categoryIdRaw, newCategoryName);
   if ("error" in categoryResult) return categoryResult;
   const categoryId = categoryResult.id;
@@ -751,8 +837,10 @@ export async function updateProductAction(
 ): Promise<{ error: string } | void> {
   const session = await requireAdmin();
 
-  const id = formData.get("id") as string | null;
-  if (!id) return { error: "Missing product ID." };
+  const rawId = formData.get("id") as string | null;
+  const idResult = z.string().uuid("Invalid product ID.").safeParse(rawId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+  const id = idResult.data;
 
   const sku = ((formData.get("sku") as string) ?? "").trim();
   const name = ((formData.get("name") as string) ?? "").trim();
@@ -796,6 +884,20 @@ export async function updateProductAction(
   if (!sku || !name || isNaN(priceRaw) || priceRaw < 0) {
     return { error: "SKU, name, and a valid price are required." };
   }
+
+  // [M11] Server-side bounds validation
+  if (name.length > 200) return { error: "Product name too long (max 200 characters)." };
+  if (details && details.length > 5000) return { error: "Details too long (max 5000 characters)." };
+  if (description && description.length > 2000) return { error: "Description too long (max 2000 characters)." };
+  if (!Number.isFinite(priceRaw) || priceRaw > 1e7) return { error: "Invalid price (max R10,000,000)." };
+  if (packSize > 10_000) return { error: "Pack size too large (max 10,000)." };
+  if (stockQty < 0 || stockQty > 10_000) return { error: "Stock quantity out of range (0–10,000)." };
+  if (costPrice !== null && (!Number.isFinite(costPrice) || costPrice < 0 || costPrice > 1e7))
+    return { error: "Invalid cost price." };
+  if (discountType === "percentage" && discountValue !== null && discountValue > 100)
+    return { error: "Percentage discount cannot exceed 100%." };
+  if (discountValue !== null && (!Number.isFinite(discountValue) || discountValue < 0))
+    return { error: "Discount value must be a non-negative number." };
 
   const categoryResult = await resolveOrCreateCategoryId(categoryIdRaw, newCategoryName);
   if ("error" in categoryResult) return categoryResult;
@@ -937,6 +1039,11 @@ export async function inviteClientAction(
     return { error: "Email and contact name are required." };
   }
 
+  // [M12] Input bounds validation
+  if (email.length > 254) return { error: "Email too long (max 254 characters)." };
+  if (contactName.length > 120) return { error: "Contact name too long (max 120 characters)." };
+  if (businessName && businessName.length > 120) return { error: "Business name too long (max 120 characters)." };
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return { error: "Please enter a valid email address." };
@@ -967,8 +1074,10 @@ export async function updateClientAction(
 ): Promise<{ error: string } | void> {
   await requireAdmin();
 
-  const id = formData.get("id") as string | null;
-  if (!id) return { error: "Missing client ID." };
+  const rawId = formData.get("id") as string | null;
+  const idResult = z.string().uuid("Invalid client ID.").safeParse(rawId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+  const id = idResult.data;
 
   const accountNumber = ((formData.get("account_number") as string) ?? "").trim();
   const businessName = ((formData.get("business_name") as string) ?? "").trim();
@@ -994,6 +1103,19 @@ export async function updateClientAction(
   if (!accountNumber || !businessName || !contactName) {
     return { error: "Account number, business name, and contact name are required." };
   }
+
+  // [M12] Input bounds validation
+  if (contactName.length > 120) return { error: "Contact name too long (max 120 characters)." };
+  if (businessName.length > 120) return { error: "Business name too long (max 120 characters)." };
+  if (email && email.length > 254) return { error: "Email too long (max 254 characters)." };
+  if (phone && phone.length > 30) return { error: "Phone too long (max 30 characters)." };
+  if (vatNumber && vatNumber.length > 30) return { error: "VAT number too long (max 30 characters)." };
+  if (creditLimit !== null && (!Number.isFinite(creditLimit) || creditLimit < 0 || creditLimit > 1e9))
+    return { error: "Credit limit out of range (0–R1,000,000,000)." };
+  if (availableCredit !== null && (!Number.isFinite(availableCredit) || availableCredit < 0 || availableCredit > 1e9))
+    return { error: "Available credit out of range." };
+  if (termsDays !== null && (termsDays < 0 || termsDays > 365))
+    return { error: "Payment terms must be 0–365 days." };
 
   const { error } = await adminClient
     .from("profiles")
@@ -1145,10 +1267,14 @@ export async function markOrderSettledAction(
 ): Promise<{ error?: string; success?: boolean }> {
   await requireAdmin();
 
+  // [L7] UUID validation on orderId
+  const idResult = z.string().uuid("Invalid order ID.").safeParse(orderId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+
   const { error } = await adminClient
     .from("orders")
     .update({ payment_status: "paid" })
-    .eq("id", orderId);
+    .eq("id", idResult.data);
 
   if (error) return { error: error.message };
 
@@ -1163,14 +1289,25 @@ export async function markOrderSettledAction(
 export async function bulkMarkOrdersSettledAction(
   orderIds: string[]
 ): Promise<{ error?: string; success?: boolean }> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  if (!orderIds.length) return { error: "No orders selected." };
+  // [M14] Only managers and super admins can bulk-settle
+  if (!session.isSuperAdmin && session.adminRole !== "manager") {
+    return { error: "Insufficient permissions." };
+  }
+
+  // [M14] Validate orderIds array: 1–500 UUIDs
+  const idsResult = z
+    .array(z.string().uuid())
+    .min(1, "No orders selected.")
+    .max(500, "Too many orders (max 500).")
+    .safeParse(orderIds);
+  if (!idsResult.success) return { error: idsResult.error.issues[0].message };
 
   const { error } = await adminClient
     .from("orders")
     .update({ payment_status: "paid" })
-    .in("id", orderIds);
+    .in("id", idsResult.data);
 
   if (error) return { error: error.message };
 
@@ -1191,11 +1328,16 @@ export async function sendClientStatementAction(
 ): Promise<{ error?: string; success?: boolean }> {
   await requireAdmin();
 
+  // [M14] UUID validation on profileId
+  const profileIdResult = z.string().uuid("Invalid client ID.").safeParse(profileId);
+  if (!profileIdResult.success) return { error: profileIdResult.error.issues[0].message };
+  const validProfileId = profileIdResult.data;
+
   // 1. Fetch profile
   const { data: profile } = await adminClient
     .from("profiles")
     .select("id, business_name, contact_name, email, account_number")
-    .eq("id", profileId)
+    .eq("id", validProfileId)
     .single();
 
   if (!profile) return { error: "Client not found." };
@@ -1208,7 +1350,7 @@ export async function sendClientStatementAction(
       `id, reference_number, created_at, confirmed_at, total_amount,
        order_items ( product_name, quantity, unit_price, line_total )`
     )
-    .eq("profile_id", profileId)
+    .eq("profile_id", validProfileId)
     .in("payment_status", ["unpaid", "credit_approved"])
     .not("confirmed_at", "is", null)
     .order("confirmed_at", { ascending: true });

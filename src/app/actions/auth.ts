@@ -16,24 +16,25 @@ export interface AuthActionResult {
 
 // ── Validation schemas ─────────────────────────────────────────────────────
 
+// [L3] All auth schemas include max-length caps to prevent oversized input
 const loginSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required.").max(128),
 });
 
 const signUpSchema = z.object({
-  contact_name: z.string().trim().min(1, "Contact name is required."),
-  business_name: z.string().trim().optional(),
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  contact_name: z.string().trim().min(1, "Contact name is required.").max(120),
+  business_name: z.string().trim().max(120).optional(),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(128),
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
 });
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(128),
 });
 
 // ── Buyer login (email + password via Supabase Auth) ──────────────────────
@@ -57,7 +58,7 @@ export async function loginAction(
     headerStore.get("x-real-ip")?.trim() ||
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
-  const rateLimit = await checkLoginRateLimit(ip);
+  const rateLimit = await checkLoginRateLimit(ip, email); // [M2] per-email bucket
   if (!rateLimit.allowed) {
     return {
       error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
@@ -76,6 +77,14 @@ export async function loginAction(
 
   // Check role to route admins to the admin portal, buyers to the dashboard
   const { data: { user } } = await supabase.auth.getUser();
+
+  // [H4] Defensive email verification check — don't rely solely on Supabase
+  // project settings. If email_confirmed_at is null, sign out immediately.
+  if (user && !user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return { error: "Please verify your email address before signing in." };
+  }
+
   if (user) {
     const { data: profile } = await adminClient
       .from("profiles")
@@ -205,8 +214,8 @@ export async function resetPasswordAction(
 // ── Admin login (unchanged) ────────────────────────────────────────────────
 
 const adminLoginSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: z.string().trim().max(254).email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required.").max(128),
 });
 
 export async function adminLoginAction(
@@ -228,7 +237,7 @@ export async function adminLoginAction(
     headerStore.get("x-real-ip")?.trim() ||
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = rawIp && rawIp.length > 0 ? rawIp : `unknown:${email}`;
-  const rateLimit = await checkLoginRateLimit(`admin:${ip}`);
+  const rateLimit = await checkLoginRateLimit(`admin:${ip}`, email); // [M2] per-email bucket
   if (!rateLimit.allowed) {
     return {
       error: `Too many login attempts. Please try again in ${rateLimit.retryAfter} seconds.`,
@@ -244,6 +253,12 @@ export async function adminLoginAction(
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Authentication failed." };
+
+  // [H4] Defensive email verification check
+  if (!user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return { error: "Please verify your email address before signing in." };
+  }
 
   const { data: profile } = await adminClient
     .from("profiles")

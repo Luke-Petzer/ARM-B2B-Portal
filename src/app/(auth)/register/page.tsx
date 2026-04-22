@@ -18,7 +18,7 @@ const schema = z.object({
   business_name: z.string().optional(),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  terms: z.literal(true, { message: "You must accept the Terms and Conditions." }),
+  terms: z.literal(true, { message: "You must accept the Terms and Conditions and Privacy Policy." }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -148,11 +148,21 @@ export default function RegisterPage() {
             <Link
               href="/terms"
               target="_blank"
+              rel="noopener noreferrer"
               className="font-medium text-foreground underline underline-offset-4"
             >
               Terms and Conditions
             </Link>{" "}
-            and Privacy Policy.
+            and acknowledge the{" "}
+            <Link
+              href="/terms#privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              Privacy Policy
+            </Link>
+            .
           </Label>
         </div>
         {errors.terms && (

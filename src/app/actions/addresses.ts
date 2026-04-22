@@ -4,14 +4,15 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 
+// [L4] Max-length caps on address fields
 const addressSchema = z.object({
-  line1: z.string().trim().min(1, "Street address is required"),
-  line2: z.string().trim().optional(),
-  suburb: z.string().trim().optional(),
-  city: z.string().trim().min(1, "City is required"),
-  province: z.string().trim().optional(),
-  postal_code: z.string().trim().optional(),
-  country: z.string().trim().default("South Africa"),
+  line1: z.string().trim().min(1, "Street address is required").max(200),
+  line2: z.string().trim().max(200).optional(),
+  suburb: z.string().trim().max(100).optional(),
+  city: z.string().trim().min(1, "City is required").max(100),
+  province: z.string().trim().max(100).optional(),
+  postal_code: z.string().trim().max(20).optional(),
+  country: z.string().trim().max(100).default("South Africa"),
 });
 
 export async function saveAddressAction(

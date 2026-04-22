@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { verifyBuyerSession, BUYER_SESSION_COOKIE } from "./buyer";
@@ -28,7 +29,14 @@ export interface ActiveSession {
  * Returns null if the user is not authenticated.
  * Safe to call from Server Components, Server Actions, and Route Handlers.
  */
-export async function getSession(
+/**
+ * React cache()-wrapped version of session resolution.
+ * Deduplicates within a single server request — layout and page can both
+ * call getSession() without redundant Supabase Auth API calls.
+ */
+export const getSession = cache(_resolveSession);
+
+async function _resolveSession(
   cookieStore?: ReadonlyRequestCookies
 ): Promise<ActiveSession | null> {
   const store = cookieStore ?? (await cookies());
@@ -56,6 +64,12 @@ export async function getSession(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // [H4] Defensive email verification check at session level
+  if (user && !user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return null;
+  }
 
   if (user) {
     // Use adminClient (service role) to bypass RLS on profiles.

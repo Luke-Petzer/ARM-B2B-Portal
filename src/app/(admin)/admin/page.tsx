@@ -154,7 +154,6 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   };
 
   const orders: OrderRow[] = (rawOrders ?? []).map((o) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = o as any;
     const buyer = raw.buyer as RawBuyer | null;
     const assignee = raw.assignee as RawAssignee;

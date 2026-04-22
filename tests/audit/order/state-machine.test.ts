@@ -114,7 +114,7 @@ describe("cancelOrderAction — pending-only guard", () => {
   it("fetches current order before attempting cancellation", () => {
     // cancelOrderAction must read the current status before writing, so it
     // can reject non-pending orders without issuing a no-op UPDATE.
-    expect(adminActionSource).toMatch(/cancelOrderAction[\s\S]{0,500}\.select\("id, status"\)/);
+    expect(adminActionSource).toMatch(/cancelOrderAction[\s\S]{0,1000}\.select\("id, status"\)/);
   });
 
   it("rejects non-pending orders with the correct status guard", () => {
@@ -140,18 +140,18 @@ describe("csvEsc — CSV encoding in exportOrdersCsvAction", () => {
   });
 
   it("csvEsc wraps values containing commas in double quotes", () => {
-    expect(adminActionSource).toMatch(/value\.includes\(","\)/);
+    expect(adminActionSource).toMatch(/v\.includes\(","\)/);
   });
 
   it("csvEsc wraps values containing double-quotes and escapes them as double-double-quotes", () => {
     // RFC 4180: a quote character must be escaped by doubling it.
-    expect(adminActionSource).toMatch(/value\.includes\('?"'?\)/);
+    expect(adminActionSource).toMatch(/v\.includes\('?"'?\)/);
     expect(adminActionSource).toMatch(/replace\(\/"\//);
     expect(adminActionSource).toMatch(/""/);
   });
 
   it("csvEsc wraps values containing newlines", () => {
-    expect(adminActionSource).toMatch(/value\.includes\(["']\\n["']\)/);
+    expect(adminActionSource).toMatch(/v\.includes\(["']\\n["']\)/);
   });
 
   it("business name is passed through csvEsc", () => {
@@ -162,27 +162,15 @@ describe("csvEsc — CSV encoding in exportOrdersCsvAction", () => {
     expect(adminActionSource).toMatch(/csvEsc\(item\.product_name\)/);
   });
 
-  it("RISK DOCUMENTED (FIN-CSV-001): csvEsc does not sanitise formula-injection prefixes", () => {
-    // SECURITY RISK: csvEsc does not prefix-sanitise values that begin with
-    // =, +, -, or @. If a business name or product name starts with one of
-    // these characters (e.g. "=cmd|'/C calc'!A0"), opening the exported CSV
-    // in Microsoft Excel or LibreOffice Calc will execute the formula.
-    //
-    // Mitigation options:
-    //   1. Prepend a tab or single-quote to any cell value starting with
-    //      =, +, -, or @.
-    //   2. Warn admins in the UI that the CSV must not be opened in a
-    //      spreadsheet application with untrusted data.
-    //   3. Require an additional admin confirmation before export.
-    //
-    // The assertion below documents that no prefix-sanitisation currently exists.
-    const hasPrefixSanitisation = /[=+\-@]/.test("dummy"); // trivially true, just for shape
-    // The real check: csvEsc source does NOT contain a guard against formula starters.
+  it("[M10] csvEsc sanitises formula-injection prefixes (CWE-1236)", () => {
+    // [M10] csvEsc now prefixes values starting with =, +, -, @, tab, or
+    // carriage-return with a single quote so spreadsheet apps treat the cell
+    // as a literal string instead of a formula.
     const csvEscBody = adminActionSource.match(/function csvEsc[\s\S]*?\n\}/)?.[0] ?? "";
-    const sanitisesFormulaPrefix =
-      /[=+\-@]/.test(csvEscBody) && /replace|prefix|formula/i.test(csvEscBody);
-    expect(sanitisesFormulaPrefix).toBe(false);
-    expect(true).toBe(true); // documentation-only assertion
+    // Must contain a regex test for formula-dangerous leading characters
+    expect(csvEscBody).toMatch(/\^?\[=\+\\-@/);
+    // Must prefix with a single quote
+    expect(csvEscBody).toMatch(/`'\$\{/);
   });
 });
 
@@ -190,29 +178,18 @@ describe("csvEsc — CSV encoding in exportOrdersCsvAction", () => {
 // 5. Double-submit risk (FIN-005) — checkout.ts
 // ---------------------------------------------------------------------------
 
-describe("checkoutAction — double-submit / idempotency risk (FIN-005)", () => {
-  it("RISK DOCUMENTED: checkoutAction has no idempotency key guard", () => {
-    // SECURITY / RELIABILITY RISK: checkoutAction does not check for an
-    // idempotency key (e.g. X-Idempotency-Key header, a client-generated
-    // nonce stored server-side, or a unique constraint on a client-supplied
-    // order token). A network timeout followed by a client retry can
-    // therefore create two identical orders for the same cart contents.
-    //
-    // Current mitigation: the atomic RPC call (create_order_atomic) uses a
-    // DB transaction, so partial writes are impossible — but a full second
-    // submission will produce a second order row with a new reference number.
-    //
-    // Recommended fix: have the client generate a UUID nonce before calling
-    // checkoutAction and pass it as an idempotency_key. The server should
-    // upsert on that key (or check for a duplicate before inserting) and
-    // return the existing order ID on a replay.
-    expect(checkoutSource).not.toMatch(/idempotency/i);
-    expect(true).toBe(true); // documentation-only assertion
+describe("checkoutAction — idempotency guard (FIN-005)", () => {
+  it("[M6] checkoutAction has a client_submission_id idempotency guard", () => {
+    // [M6] The checkout flow now accepts a client-generated submission ID
+    // (client_submission_id) and checks for duplicate submissions before
+    // creating a new order. This prevents double-submit from network retries.
+    expect(checkoutSource).toMatch(/idempotency/i);
+    expect(checkoutSource).toMatch(/client_submission_id/);
   });
 
-  it("RISK DOCUMENTED: no X-Idempotency-Key header is extracted or validated", () => {
-    // Confirms no HTTP-level idempotency mechanism is present in the checkout flow.
-    expect(checkoutSource).not.toMatch(/X-Idempotency-Key/i);
-    expect(true).toBe(true); // documentation-only assertion
+  it("[M6] duplicate submission ID returns the existing order instead of creating a new one", () => {
+    // The server queries for an existing order with the same client_submission_id
+    // and short-circuits if found, preventing duplicate order creation.
+    expect(checkoutSource).toMatch(/\.eq\("client_submission_id"/);
   });
 });

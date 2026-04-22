@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowDown, Linkedin, Instagram, Phone, Mail, MapPin } from 'lucide-react'
+import PublicNavBar from '@/components/PublicNavBar'
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
@@ -16,12 +17,12 @@ const bebasNeue = Bebas_Neue({
 const departments = [
   {
     number: '01',
-    name: 'Custom Steel Fabrication',
-    subtitle: 'Laser Cutting · CNC Bending · Custom Metalwork',
+    name: 'Carport & Outdoor Structures',
+    subtitle: 'Round & Square Poles · Washing Line Poles · Flashings · Truss Hangers · Bracing · Nail Plates',
     description:
-      'From concept to finished component — we cut, bend and fabricate structural steel to exact tolerances. Our CNC laser cutting and press braking capabilities handle complex geometries for bespoke industrial applications.',
-    image: '/image-1.webp',
-    imageAlt: 'Laser cutting steel in a manufacturing facility',
+      'Round and square carport poles in multiple diameters and thicknesses, plus washing line poles. Galvanised and treated for outdoor durability — supplied in bulk packs for trade and construction. Also includes essential structural hardware for commercial roofing and general construction: galvanised flashings, truss hangers, bracing straps, hoop iron and nail plates — built to last in demanding site conditions.',
+    image: '/image-6.webp',
+    imageAlt: 'Steel carport and outdoor structure poles',
   },
   {
     number: '02',
@@ -52,30 +53,21 @@ const departments = [
   },
   {
     number: '05',
-    name: 'Roofing & Construction',
-    subtitle: 'Flashings · Truss Hangers · Bracing · Nail Plates',
-    description:
-      'Essential structural hardware for commercial roofing and general construction. Galvanised flashings, truss hangers, bracing straps, hoop iron and nail plates — built to last in demanding site conditions.',
-    image: '/image-5.webp',
-    imageAlt: 'Roofing and construction steel hardware',
-  },
-  {
-    number: '06',
-    name: 'Carport & Outdoor Structures',
-    subtitle: 'Round & Square Poles · Washing Line Poles',
-    description:
-      'Round and square carport poles in multiple diameters and thicknesses, plus washing line poles. Galvanised and treated for outdoor durability — supplied in bulk packs for trade and construction.',
-    image: '/image-6.webp',
-    imageAlt: 'Steel carport and outdoor structure poles',
-  },
-  {
-    number: '07',
     name: 'Workshop & Welding Supplies',
     subtitle: 'Argo Welding Rods · Cutting Disks · Tools',
     description:
       'Professional-grade workshop essentials under the Argo range — welding rods in multiple weights, cutting disks in all standard sizes, and gate wheel kits. Reliable consumables for fabricators and contractors.',
     image: '/image-7.webp',
     imageAlt: 'Welding and workshop tools and supplies',
+  },
+  {
+    number: '06',
+    name: 'Custom Steel Fabrication',
+    subtitle: 'Laser Cutting · CNC Bending · Custom Metalwork',
+    description:
+      'From concept to finished component — we cut, bend and fabricate structural steel to exact tolerances. Our CNC laser cutting and press braking capabilities handle complex geometries for bespoke industrial applications.',
+    image: '/image-1.webp',
+    imageAlt: 'Laser cutting steel in a manufacturing facility',
   },
 ]
 
@@ -84,41 +76,7 @@ export default function LandingPage() {
     <div className={`${bebasNeue.variable} min-h-screen bg-[#050d14] text-white overflow-x-hidden`}>
 
       {/* ── NAVBAR ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#050d14]/80 backdrop-blur-md">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-16 lg:px-24 py-4 flex items-center justify-between">
-          <Link href="/" className="flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
-            <Image
-              src="/logo-dark.png"
-              alt="AR Steel Manufacturing"
-              height={42}
-              width={105}
-              className="object-contain border border-[#1a3a6e] rounded"
-              priority
-            />
-          </Link>
-
-          <div className="flex items-center gap-5 md:gap-8">
-            <a
-              href="#services"
-              className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
-            >
-              Services
-            </a>
-            <a
-              href="#footer"
-              className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
-            >
-              Contact Us
-            </a>
-            <Link
-              href="/login"
-              className="text-sm border border-white/30 hover:border-white text-white px-5 py-2 min-h-[44px] rounded-sm transition-all duration-200 font-bebas tracking-widest hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
-            >
-              Login
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNavBar />
 
       {/* ── HERO ── */}
       <section
@@ -274,7 +232,7 @@ export default function LandingPage() {
       {/* ── FOOTER ── */}
       <footer id="footer" className="bg-[#03080c] border-t border-white/[0.05] pt-20 pb-10">
         <div className="max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
 
             {/* Brand */}
             <div>
@@ -285,10 +243,15 @@ export default function LandingPage() {
                 width={150}
                 className="object-contain mb-5 max-w-[120px]"
               />
-              <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs">
+              <p className="font-inter text-sm text-white/35 leading-relaxed max-w-xs mb-5">
                 Precision-manufactured steel products and hardware for the
                 construction, security and fabrication industries.
               </p>
+              <div className="font-inter text-xs text-white/20 space-y-1">
+                <p>AR Steel Manufacturing (Pty) Ltd</p>
+                <p>CIPC Reg: [TO BE PROVIDED]</p>
+                <p>VAT No: [TO BE PROVIDED]</p>
+              </div>
             </div>
 
             {/* Quick Links */}
@@ -306,8 +269,42 @@ export default function LandingPage() {
                   </a>
                 </li>
                 <li>
+                  <Link href="/catalogue" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Catalogue
+                  </Link>
+                </li>
+                <li>
                   <Link href="/login" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
                     Login
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-bebas text-white tracking-widest text-lg mb-6 border-l-2 border-white/15 pl-3">
+                Legal
+              </h4>
+              <ul className="space-y-3 font-inter text-sm text-white/40">
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Terms &amp; Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#privacy" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#returns" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Returns &amp; Refunds
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms#delivery" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Delivery Terms
                   </Link>
                 </li>
               </ul>

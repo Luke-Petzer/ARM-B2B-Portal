@@ -52,8 +52,8 @@ export default function NavBar({ role, businessName }: NavBarProps) {
             <Image
               src="/logo.png"
               alt="AR Steel Manufacturing"
-              height={52}
-              width={115}
+              height={64}
+              width={142}
               priority
               className="object-contain"
             />
@@ -102,8 +102,8 @@ export default function NavBar({ role, businessName }: NavBarProps) {
 
           {/* Business name — desktop only */}
           {businessName && (
-            <span className="hidden md:block text-xs font-medium text-gray-500 max-w-[180px] truncate">
-              {businessName}
+            <span className="hidden md:block text-sm font-semibold text-gray-700 max-w-[180px] truncate">
+              User: {businessName}
             </span>
           )}
 
