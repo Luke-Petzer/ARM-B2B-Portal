@@ -1,12 +1,40 @@
+import { getSession } from "@/lib/auth/session";
+import NavBar from "@/components/portal/NavBar";
+import PublicNavBar from "@/components/PublicNavBar";
+import { adminClient } from "@/lib/supabase/admin";
+import type { AppRole } from "@/lib/supabase/types";
+
 export const metadata = {
   title: "Terms & Policies | AR Steel Manufacturing",
   description:
     "Terms and Conditions, Privacy Policy, Returns, and Delivery Terms for the AR Steel Manufacturing B2B Ordering Portal.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const session = await getSession();
+
+  let businessName: string | null = null;
+  if (session?.profileId) {
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("business_name")
+      .eq("id", session.profileId)
+      .single();
+    businessName = profile?.business_name ?? null;
+  }
+
   return (
-    <div className="min-h-screen bg-white px-6 py-16">
+    <div className="min-h-screen bg-white flex flex-col">
+      {session ? (
+        <NavBar
+          role={session.role as AppRole | undefined}
+          businessName={businessName}
+        />
+      ) : (
+        <PublicNavBar />
+      )}
+
+      <div className={`px-6 py-16 ${!session ? "pt-[88px]" : ""}`}>
       <div className="max-w-3xl mx-auto space-y-10 text-slate-700">
         <div>
           <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
@@ -491,6 +519,7 @@ export default function TermsPage() {
         <p className="text-xs text-slate-400 pt-4 border-t border-slate-100">
           &copy; {new Date().getFullYear()} AR Steel Manufacturing (Pty) Ltd. All rights reserved.
         </p>
+      </div>
       </div>
     </div>
   );
