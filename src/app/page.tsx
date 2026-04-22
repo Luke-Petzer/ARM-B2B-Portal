@@ -95,6 +95,12 @@ export default function LandingPage() {
             >
               Services
             </a>
+            <Link
+              href="/catalogue"
+              className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
+            >
+              Catalogue
+            </Link>
             <a
               href="#footer"
               className="text-sm text-white/60 hover:text-white transition-colors duration-200 font-inter hidden md:block focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
