@@ -607,6 +607,7 @@ export default function OrderLedger({
 
   // Sync state when the server re-renders (e.g. after router.refresh())
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync of server-provided props to local state on router.refresh()
     setOrders(initialOrders);
     setLiveCount(totalCount);
   }, [initialOrders, totalCount]);
