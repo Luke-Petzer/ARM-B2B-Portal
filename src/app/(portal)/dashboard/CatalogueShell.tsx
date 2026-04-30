@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import ProductRow from "@/components/portal/ProductRow";
 import CartSidebar from "@/components/portal/CartSidebar";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 interface ProductRowData {
   productId: string;
@@ -66,6 +67,7 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
   const [query, setQuery] = useState("");
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const isSearching = query.trim().length > 0;
+  const pillsRef = useDragScroll<HTMLDivElement>();
 
   /** Flat filtered list — used only when search is active */
   const filtered = useMemo(() => {
@@ -142,8 +144,8 @@ export default function CatalogueShell({ products, categories }: CatalogueShellP
           {!isSearching && grouped.length > 1 && (
             <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
               <div
-                className="flex gap-2 px-6 md:px-8 py-2.5 overflow-x-auto"
-                style={{ scrollbarWidth: "none" }}
+                ref={pillsRef}
+                className="flex gap-2 px-6 md:px-8 py-2.5 overflow-x-auto scrollbar-hide touch-pan-x"
               >
                 {grouped.map((group) => (
                   <button
