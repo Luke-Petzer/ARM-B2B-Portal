@@ -135,6 +135,7 @@ export interface Database {
           available_credit: number | null;
           payment_terms_days: number | null;
           notes: string | null;
+          client_discount_pct: number;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -158,6 +159,7 @@ export interface Database {
           available_credit?: number | null;
           payment_terms_days?: number | null;
           notes?: string | null;
+          client_discount_pct?: number;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -181,10 +183,66 @@ export interface Database {
           available_credit?: number | null;
           payment_terms_days?: number | null;
           notes?: string | null;
+          client_discount_pct?: number;
           is_active?: boolean;
           updated_at?: string;
         };
         Relationships: [];
+      };
+
+      // ----------------------------------------------------------------
+      // client_custom_prices — per-product custom prices for buyers
+      // ----------------------------------------------------------------
+      client_custom_prices: {
+        Row: {
+          id: string;
+          profile_id: string;
+          product_id: string;
+          custom_price: number;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          product_id: string;
+          custom_price: number;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          product_id?: string;
+          custom_price?: number;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_custom_prices_profile_id_fkey";
+            columns: ["profile_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_custom_prices_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_custom_prices_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
 
       // ----------------------------------------------------------------

@@ -11,6 +11,7 @@ import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
+import { resolveProductPrices, type CustomPriceEntry } from "@/lib/pricing/resolveClientPricing";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
 import { checkActionRateLimit } from "@/lib/rate-limit";
 
@@ -251,6 +252,33 @@ export async function checkoutAction(
   // Build a lookup map (price + cost_price + pack_size + discount rules)
   const productMap = new Map(productRows.map((p) => [p.id, p]));
 
+  // 4b. Resolve custom pricing for this buyer
+  const [{ data: rawCustomPrices }, { data: profilePricing }] = await Promise.all([
+    adminClient
+      .from("client_custom_prices")
+      .select("product_id, custom_price")
+      .eq("profile_id", session.profileId),
+    adminClient
+      .from("profiles")
+      .select("client_discount_pct")
+      .eq("id", session.profileId)
+      .single(),
+  ]);
+
+  const customPrices: CustomPriceEntry[] = (rawCustomPrices ?? []).map((cp) => ({
+    product_id: cp.product_id as string,
+    custom_price: Number(cp.custom_price),
+  }));
+  const clientDiscountPct = Number(profilePricing?.client_discount_pct ?? 0);
+
+  // Apply custom pricing to product rows
+  const productsForResolver = productRows.map((p) => ({
+    id: p.id,
+    price: Number(p.price),
+  }));
+  const resolvedPrices = resolveProductPrices(productsForResolver, customPrices, clientDiscountPct);
+  const resolvedPriceMap = new Map(resolvedPrices.map((r) => [r.id, r.price]));
+
   // Guard: every cart item must resolve to a live DB product.
   // A missing entry means the product was deleted between page load and submit.
   for (const item of items) {
@@ -272,13 +300,14 @@ export async function checkoutAction(
   //    accepts only DB-sourced product fields.
   const lineItems = items.map((item) => {
     const dbProduct = productMap.get(item.productId)!;
-    return computeLineItem(dbProduct, item.quantity);
+    const resolvedPrice = resolvedPriceMap.get(item.productId) ?? Number(dbProduct.price);
+    return computeLineItem({ ...dbProduct, price: resolvedPrice }, item.quantity);
   });
 
   const lineTotals = lineItems.map((li) => li.lineTotal);
   const discountSavings = items.map((item, idx) => {
-    const dbPrice = Number(productMap.get(item.productId)!.price);
-    return r2((dbPrice - lineItems[idx].effectiveUnitPrice) * item.quantity);
+    const resolvedPrice = resolvedPriceMap.get(item.productId) ?? Number(productMap.get(item.productId)!.price);
+    return r2((resolvedPrice - lineItems[idx].effectiveUnitPrice) * item.quantity);
   });
 
   const { subtotal, totalDiscountAmount, vatAmount, totalAmount } =
@@ -324,7 +353,7 @@ export async function checkoutAction(
       product_id: item.productId,
       sku: item.sku,
       product_name: item.name,
-      unit_price: Number(dbProduct.price),      // verified server-side price
+      unit_price: resolvedPriceMap.get(item.productId) ?? Number(dbProduct.price),  // resolved custom/discounted price
       cost_price: dbProduct.cost_price ?? null, // snapshot for margin reporting
       pack_size: dbProduct.pack_size,           // snapshot for display integrity
       quantity: item.quantity,
