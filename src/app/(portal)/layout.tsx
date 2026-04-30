@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import GlobalBanner from "@/components/portal/GlobalBanner";
 import NavBar from "@/components/portal/NavBar";
+import CartGuard from "@/components/portal/CartGuard";
 import type { AppRole } from "@/lib/supabase/types";
 
 export const revalidate = 60; // revalidate banner state at most every 60 seconds
@@ -46,6 +47,7 @@ export default async function PortalLayout({
 
   return (
     <div className="h-[100dvh] overflow-hidden flex flex-col bg-white">
+      <CartGuard />
       {/* Banner is flex-shrink-0 so it never compresses the content area */}
       {showBanner && <GlobalBanner message={settings!.banner_message!} />}
       {/* NavBar lives here — outside any overflow container, always visible */}
