@@ -338,8 +338,8 @@ export default function ClientDrawer({
                   />
                 </div>
 
-                {/* Custom Pricing */}
-                {isEdit && (
+                {/* Custom Pricing — visible for 30-day accounts only (extensible later) */}
+                {isEdit && is30Day && (
                   <div className="space-y-4 pt-2 border-t border-slate-100">
                     <div>
                       <FieldLabel>Client Discount (%)</FieldLabel>
