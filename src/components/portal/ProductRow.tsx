@@ -40,6 +40,7 @@ export default function ProductRow({
 }: ProductRowProps) {
   const [qty, setQty] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAdd = () => {
@@ -69,7 +70,11 @@ export default function ProductRow({
       {/* ── Row 1 on mobile: thumbnail + name/sku/price ── */}
       <div className="flex items-center gap-4 md:contents">
         {/* Thumbnail — grid col 1 */}
-        <div className="relative group flex-shrink-0 w-fit">
+        <div
+          className="relative flex-shrink-0 w-fit"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
           <div className="w-[44px] h-[44px] bg-gray-50 border border-gray-100 rounded flex items-center justify-center overflow-hidden">
             {primaryImageUrl ? (
               <Image
@@ -77,18 +82,20 @@ export default function ProductRow({
                 alt={name}
                 width={44}
                 height={44}
+                sizes="44px"
                 className="object-cover w-full h-full"
               />
             ) : (
               <Package className="w-5 h-5 text-gray-300" />
             )}
           </div>
-          {primaryImageUrl && (
-            <div className="absolute bottom-full left-0 mb-2 z-50 w-72 h-72 rounded-lg overflow-hidden shadow-xl border border-slate-200 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 bg-white backdrop-blur-sm">
+          {hovered && primaryImageUrl && (
+            <div className="absolute bottom-full left-0 mb-2 z-50 w-72 h-72 rounded-lg overflow-hidden shadow-xl border border-slate-200 pointer-events-none bg-white backdrop-blur-sm">
               <Image
                 src={primaryImageUrl}
                 alt={name}
                 fill
+                sizes="288px"
                 className="object-contain"
               />
             </div>
