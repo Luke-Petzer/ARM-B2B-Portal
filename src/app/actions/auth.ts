@@ -66,7 +66,7 @@ export async function loginAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     if (error.code === "email_not_confirmed") {
@@ -76,7 +76,7 @@ export async function loginAction(
   }
 
   // Check role to route admins to the admin portal, buyers to the dashboard
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = data.user;
 
   // [H4] Defensive email verification check — don't rely solely on Supabase
   // project settings. If email_confirmed_at is null, sign out immediately.
@@ -245,13 +245,13 @@ export async function adminLoginAction(
   }
 
   const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
   if (signInError) {
     return { error: "Invalid email or password." };
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = data.user;
   if (!user) return { error: "Authentication failed." };
 
   // [H4] Defensive email verification check
