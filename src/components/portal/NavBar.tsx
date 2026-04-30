@@ -36,8 +36,10 @@ export default function NavBar({ role, businessName }: NavBarProps) {
   const cartCount = useCartStore((s) =>
     s.items.reduce((n, item) => n + item.quantity, 0)
   );
+  const clearCart = useCartStore((s) => s.clearCart);
 
   const handleLogout = () => {
+    clearCart();
     startLogout(async () => {
       await logoutAction();
     });
