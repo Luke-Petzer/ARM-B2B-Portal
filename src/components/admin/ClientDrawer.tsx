@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2, Info } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { Loader2, Info, Search, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { inviteClientAction, updateClientAction } from "@/app/actions/admin";
+import {
+  inviteClientAction,
+  updateClientAction,
+  listClientCustomPricesAction,
+  setClientCustomPriceAction,
+  removeClientCustomPriceAction,
+  updateClientDiscountPctAction,
+  searchProductsAction,
+} from "@/app/actions/admin";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +45,7 @@ export interface ClientForDrawer {
   payment_terms_days: number | null;
   notes: string | null;
   is_active: boolean;
+  client_discount_pct: number;
 }
 
 interface ClientDrawerProps {
@@ -105,6 +114,42 @@ export default function ClientDrawer({
     client?.role ?? "buyer_default"
   );
   const is30Day = role === "buyer_30_day";
+
+  // Custom pricing state
+  const [discountPct, setDiscountPct] = useState<string>(
+    String(client?.client_discount_pct ?? 0)
+  );
+  const [customPrices, setCustomPrices] = useState<{
+    id: string; product_id: string; product_name: string; product_sku: string;
+    base_price: number; custom_price: number; notes: string | null;
+  }[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; sku: string; price: number }[]>([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [addingPrice, setAddingPrice] = useState<{ productId: string; productName: string; basPrice: number } | null>(null);
+  const [newCustomPrice, setNewCustomPrice] = useState("");
+
+  useEffect(() => {
+    if (isEdit && client && open) {
+      setLoadingPrices(true);
+      listClientCustomPricesAction(client.id).then((result) => {
+        if ("data" in result) setCustomPrices(result.data);
+        setLoadingPrices(false);
+      });
+      setDiscountPct(String(client.client_discount_pct ?? 0));
+    }
+  }, [isEdit, client, open]);
+
+  const handleProductSearch = async (q: string) => {
+    setProductSearch(q);
+    if (q.trim().length < 2) { setSearchResults([]); return; }
+    const result = await searchProductsAction(q.trim());
+    if ("data" in result) {
+      // Filter out products that already have a custom price
+      const existingIds = new Set(customPrices.map((cp) => cp.product_id));
+      setSearchResults(result.data.filter((p) => !existingIds.has(p.id)));
+    }
+  };
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -292,6 +337,170 @@ export default function ClientDrawer({
                     placeholder="e.g. 4123456789"
                   />
                 </div>
+
+                {/* Custom Pricing */}
+                {isEdit && (
+                  <div className="space-y-4 pt-2 border-t border-slate-100">
+                    <div>
+                      <FieldLabel>Client Discount (%)</FieldLabel>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={discountPct}
+                          onChange={(e) => setDiscountPct(e.target.value)}
+                          className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                          placeholder="e.g. 5"
+                        />
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => {
+                            const val = parseFloat(discountPct);
+                            if (isNaN(val) || val < 0 || val > 100) return;
+                            startTransition(async () => {
+                              const result = await updateClientDiscountPctAction(client!.id, val);
+                              if (result && "error" in result) setError(result.error);
+                            });
+                          }}
+                          className="h-10 px-3 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors whitespace-nowrap"
+                        >
+                          Save %
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1.5">
+                        Blanket discount applied to all products without a custom price.
+                      </p>
+                    </div>
+
+                    <div>
+                      <FieldLabel>Per-Product Custom Prices</FieldLabel>
+
+                      {/* Search for products */}
+                      <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={productSearch}
+                          onChange={(e) => handleProductSearch(e.target.value)}
+                          placeholder="Search by SKU or product name..."
+                          className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                        />
+                      </div>
+
+                      {/* Search results dropdown */}
+                      {searchResults.length > 0 && (
+                        <div className="mb-3 border border-slate-200 rounded-lg overflow-hidden max-h-[160px] overflow-y-auto">
+                          {searchResults.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setAddingPrice({ productId: p.id, productName: p.name, basPrice: p.price });
+                                setNewCustomPrice(String(p.price));
+                                setSearchResults([]);
+                                setProductSearch("");
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-slate-700 truncate">{p.name}</p>
+                                <p className="text-[11px] text-slate-400">{p.sku}</p>
+                              </div>
+                              <span className="text-xs text-slate-500 ml-2">R{p.price.toFixed(2)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add custom price inline form */}
+                      {addingPrice && (
+                        <div className="mb-3 p-3 bg-blue-50/50 border border-blue-100 rounded-lg space-y-2">
+                          <p className="text-xs font-medium text-slate-700">{addingPrice.productName}</p>
+                          <p className="text-[11px] text-slate-400">Base price: R{addingPrice.basPrice.toFixed(2)}</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={newCustomPrice}
+                              onChange={(e) => setNewCustomPrice(e.target.value)}
+                              placeholder="Custom price"
+                              className="flex-1 h-8 px-2 bg-white border border-slate-200 rounded text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            />
+                            <button
+                              type="button"
+                              disabled={isPending}
+                              onClick={() => {
+                                const price = parseFloat(newCustomPrice);
+                                if (isNaN(price) || price < 0) return;
+                                startTransition(async () => {
+                                  const result = await setClientCustomPriceAction(client!.id, addingPrice!.productId, price);
+                                  if (result && "success" in result) {
+                                    // Refresh the list
+                                    const listResult = await listClientCustomPricesAction(client!.id);
+                                    if ("data" in listResult) setCustomPrices(listResult.data);
+                                    setAddingPrice(null);
+                                    setNewCustomPrice("");
+                                  } else if (result && "error" in result) {
+                                    setError(result.error);
+                                  }
+                                });
+                              }}
+                              className="h-8 px-3 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 transition-colors"
+                            >
+                              Set
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setAddingPrice(null); setNewCustomPrice(""); }}
+                              className="h-8 px-2 text-slate-400 hover:text-slate-600"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Existing custom prices list */}
+                      {loadingPrices ? (
+                        <div className="text-xs text-slate-400 py-4 text-center">Loading custom prices...</div>
+                      ) : customPrices.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-2">No custom prices set for this client.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                          {customPrices.map((cp) => (
+                            <div key={cp.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-slate-700 truncate">{cp.product_name}</p>
+                                <p className="text-[11px] text-slate-400">{cp.product_sku} · Base: R{cp.base_price.toFixed(2)}</p>
+                              </div>
+                              <div className="flex items-center gap-2 ml-2">
+                                <span className="text-sm font-semibold text-slate-900">R{cp.custom_price.toFixed(2)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    startTransition(async () => {
+                                      const result = await removeClientCustomPriceAction(client!.id, cp.product_id);
+                                      if (result && "success" in result) {
+                                        setCustomPrices((prev) => prev.filter((p) => p.id !== cp.id));
+                                      }
+                                    });
+                                  }}
+                                  className="text-slate-300 hover:text-red-500 transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Notes */}
                 <div className="pt-2 border-t border-slate-100">

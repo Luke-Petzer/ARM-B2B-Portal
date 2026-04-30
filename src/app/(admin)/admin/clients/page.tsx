@@ -29,6 +29,7 @@ export default async function AdminClientsPage() {
     payment_terms_days: c.payment_terms_days,
     notes: c.notes,
     is_active: c.is_active,
+    client_discount_pct: Number(c.client_discount_pct ?? 0),
   }));
 
   // Fetch unpaid orders for all 30-day clients
