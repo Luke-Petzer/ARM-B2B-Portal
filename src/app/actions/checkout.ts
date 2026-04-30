@@ -9,7 +9,7 @@ import { renderInvoiceToBuffer } from "@/lib/pdf/invoice";
 import SupplierInvoice from "@/emails/SupplierInvoice";
 import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
-import type { Database } from "@/lib/supabase/types";
+import type { Database, Json } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
 import { resolveProductPrices, type CustomPriceEntry } from "@/lib/pricing/resolveClientPricing";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
@@ -168,7 +168,8 @@ async function dispatchFulfillmentEmails(
 export async function checkoutAction(
   rawItems: unknown,
   orderNotes: string = "",
-  clientSubmissionId?: string
+  clientSubmissionId?: string,
+  addressId?: string | null
 ): Promise<{ error: string } | void> {
   // 1. Authenticate
   const session = await getSession();
@@ -200,18 +201,59 @@ export async function checkoutAction(
     }
   }
 
-  // Check buyer has at least one shipping address. Admins are exempt — only
-  // buyers are required to provide a delivery address before placing an order.
-  if (session.isBuyer) {
-    const { data: addresses } = await adminClient
-      .from("addresses")
-      .select("id")
-      .eq("profile_id", session.profileId)
-      .eq("type", "shipping")
-      .limit(1);
+  // Fetch and validate the selected shipping address
+  let shippingAddressSnapshot: Json | null = null;
 
-    if (!addresses || addresses.length === 0) {
-      return { error: "address_required" };
+  if (session.isBuyer) {
+    if (!addressId) {
+      // No address selected — check if any exist
+      const { data: anyAddress } = await adminClient
+        .from("addresses")
+        .select("id, label, line1, line2, suburb, city, province, postal_code, country")
+        .eq("profile_id", session.profileId)
+        .eq("type", "shipping")
+        .eq("is_default", true)
+        .limit(1);
+
+      if (!anyAddress || anyAddress.length === 0) {
+        return { error: "address_required" };
+      }
+      // Use default address
+      const defaultAddr = anyAddress[0];
+      shippingAddressSnapshot = {
+        label: defaultAddr.label,
+        line1: defaultAddr.line1,
+        line2: defaultAddr.line2,
+        suburb: defaultAddr.suburb,
+        city: defaultAddr.city,
+        province: defaultAddr.province,
+        postal_code: defaultAddr.postal_code,
+        country: defaultAddr.country,
+      };
+    } else {
+      // Validate ownership and fetch the selected address
+      const { data: selectedAddress } = await adminClient
+        .from("addresses")
+        .select("id, label, line1, line2, suburb, city, province, postal_code, country")
+        .eq("id", addressId)
+        .eq("profile_id", session.profileId)
+        .eq("type", "shipping")
+        .single();
+
+      if (!selectedAddress) {
+        return { error: "Selected delivery address not found. Please choose another." };
+      }
+
+      shippingAddressSnapshot = {
+        label: selectedAddress.label,
+        line1: selectedAddress.line1,
+        line2: selectedAddress.line2,
+        suburb: selectedAddress.suburb,
+        city: selectedAddress.city,
+        province: selectedAddress.province,
+        postal_code: selectedAddress.postal_code,
+        country: selectedAddress.country,
+      };
     }
   }
 
@@ -379,6 +421,7 @@ export async function checkoutAction(
         vat_amount: vatAmount,
         total_amount: totalAmount,
         order_notes: trimmedNotes,
+        shipping_address: shippingAddressSnapshot,
       },
       p_items: orderItemPayloads,
     }

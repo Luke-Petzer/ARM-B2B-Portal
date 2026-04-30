@@ -11,6 +11,7 @@ import { Loader2, MapPin } from "lucide-react";
 import { saveAddressAction } from "@/app/actions/addresses";
 
 const schema = z.object({
+  label: z.string().max(100).optional(),
   line1: z.string().min(1, "Street address is required"),
   line2: z.string().optional(),
   suburb: z.string().optional(),
@@ -22,7 +23,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface AddressGateFormProps {
-  onSaved: () => void;
+  onSaved: (addressId?: string) => void;
 }
 
 export default function AddressGateForm({ onSaved }: AddressGateFormProps) {
@@ -44,7 +45,7 @@ export default function AddressGateForm({ onSaved }: AddressGateFormProps) {
       if ("error" in result) {
         setServerError(result.error);
       } else {
-        onSaved();
+        onSaved(result.addressId);
       }
     });
   }
@@ -59,6 +60,10 @@ export default function AddressGateForm({ onSaved }: AddressGateFormProps) {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <div>
+          <Label htmlFor="label" className="text-xs">Label (optional)</Label>
+          <Input id="label" placeholder="e.g. Main Office, Warehouse" {...register("label")} />
+        </div>
         <div>
           <Label htmlFor="line1" className="text-xs">Street Address *</Label>
           <Input id="line1" placeholder="123 Main Street" {...register("line1")} />

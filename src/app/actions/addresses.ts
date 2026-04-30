@@ -6,6 +6,7 @@ import { adminClient } from "@/lib/supabase/admin";
 
 // [L4] Max-length caps on address fields
 const addressSchema = z.object({
+  label: z.string().trim().max(100).optional(),
   line1: z.string().trim().min(1, "Street address is required").max(200),
   line2: z.string().trim().max(200).optional(),
   suburb: z.string().trim().max(100).optional(),
@@ -17,11 +18,12 @@ const addressSchema = z.object({
 
 export async function saveAddressAction(
   formData: FormData
-): Promise<{ error: string } | { success: true }> {
+): Promise<{ error: string } | { success: true; addressId: string }> {
   const session = await getSession();
   if (!session || !session.isBuyer) return { error: "Unauthorized" };
 
   const parsed = addressSchema.safeParse({
+    label: formData.get("label") || undefined,
     line1: formData.get("line1"),
     line2: formData.get("line2") || undefined,
     suburb: formData.get("suburb") || undefined,
@@ -35,13 +37,17 @@ export async function saveAddressAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const { error } = await adminClient.from("addresses").insert({
-    profile_id: session.profileId,
-    type: "shipping",
-    is_default: true,
-    ...parsed.data,
-  });
+  const { data: newAddress, error } = await adminClient
+    .from("addresses")
+    .insert({
+      profile_id: session.profileId,
+      type: "shipping",
+      is_default: true,
+      ...parsed.data,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { error: "Failed to save address. Please try again." };
-  return { success: true };
+  if (error || !newAddress) return { error: "Failed to save address. Please try again." };
+  return { success: true, addressId: newAddress.id };
 }
