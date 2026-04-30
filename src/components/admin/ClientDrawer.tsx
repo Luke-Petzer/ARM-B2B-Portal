@@ -117,6 +117,7 @@ export default function ClientDrawer({
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
+    if (isEdit) formData.set("id", client!.id);
 
     startTransition(async () => {
       const result = isEdit
