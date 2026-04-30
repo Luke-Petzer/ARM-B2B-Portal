@@ -38,7 +38,7 @@ export default async function CataloguePage() {
 
       <div className={`flex-1 ${!session ? "pt-[72px]" : ""}`}>
         <div className="max-w-4xl mx-auto">
-          {pages.map((page) => (
+          {pages.map((page, i) => (
             <Image
               key={page.src}
               src={page.src}
@@ -46,7 +46,9 @@ export default async function CataloguePage() {
               width={1240}
               height={1754}
               className="w-full h-auto block"
-              priority={page.src.includes("page-01")}
+              sizes="(max-width: 896px) 100vw, 896px"
+              priority={i === 0}
+              loading={i === 0 ? undefined : "eager"}
             />
           ))}
         </div>
