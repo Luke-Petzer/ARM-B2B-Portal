@@ -273,7 +273,12 @@ export default async function TermsPage() {
             <h3 className="font-semibold text-slate-800">9. Cookies</h3>
             <p>
               The Portal uses strictly necessary session cookies to authenticate your
-              account. No tracking, advertising, or analytics cookies are used.
+              account. For full details on cookies used and to manage your preferences,
+              see our{" "}
+              <a href="/cookie-policy" className="text-slate-700 underline hover:text-slate-900 transition-colors">
+                Cookie Policy
+              </a>
+              .
             </p>
 
             <h3 className="font-semibold text-slate-800">10. Changes to this Policy</h3>
