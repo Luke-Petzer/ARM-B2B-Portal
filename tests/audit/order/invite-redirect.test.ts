@@ -1,7 +1,8 @@
 /**
  * Structural test: inviteClientAction must include redirectTo pointing at
- * NEXT_PUBLIC_APP_URL so invite emails land on our verify-success page,
- * not the raw Supabase project URL.
+ * NEXT_PUBLIC_APP_URL/auth/callback?next=/reset-password so invited clients
+ * land on the Set Password page (not verify-success, which assumes the user
+ * already has a password).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -17,7 +18,7 @@ describe("inviteClientAction — redirectTo", () => {
     expect(source).toMatch(/inviteUserByEmail\(email,\s*\{[\s\S]*?redirectTo:/);
   });
 
-  it("redirectTo uses NEXT_PUBLIC_APP_URL", () => {
-    expect(source).toMatch(/NEXT_PUBLIC_APP_URL.*auth\/callback.*verify-success/);
+  it("redirectTo routes to reset-password (not verify-success — invited users have no password yet)", () => {
+    expect(source).toMatch(/NEXT_PUBLIC_APP_URL.*auth\/callback.*reset-password/);
   });
 });
