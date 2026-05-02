@@ -1,5 +1,3 @@
-"use client";
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -21,6 +19,11 @@ interface ConsentState {
   closeModal: () => void;
   updatePreference: (category: "analytics" | "marketing", value: boolean) => void;
   saveCustom: () => void;
+  /**
+   * Returns true if the user has consented to the given cookie category.
+   * Use this to gate analytics/marketing scripts when they are added:
+   *   if (hasConsented("analytics")) { ... }
+   */
   hasConsented: (category: "analytics" | "marketing") => boolean;
 }
 

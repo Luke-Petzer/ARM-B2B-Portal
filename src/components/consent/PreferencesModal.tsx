@@ -45,6 +45,9 @@ export default function PreferencesModal() {
         // Close on backdrop click
         if (e.target === e.currentTarget) closeModal();
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") closeModal();
+      }}
     >
       <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
         {/* Header */}
