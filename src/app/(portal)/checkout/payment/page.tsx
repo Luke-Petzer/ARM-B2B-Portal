@@ -5,7 +5,7 @@ import { redirect, notFound } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import { AlertCircle } from "lucide-react";
 import PaymentForm from "./PaymentForm";
-import CoolingOffNotice from "@/components/CoolingOffNotice";
+import CoolingOffModal from "@/components/portal/CoolingOffModal";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -221,8 +221,10 @@ export default async function PaymentPage({ searchParams }: PageProps) {
               </p>
             </div>
 
-            {/* ECT Act Section 44 cooling-off disclosure */}
-            <CoolingOffNotice />
+            {/* ECT Act Section 44 — discreet link to returns notice */}
+            <div className="flex justify-end">
+              <CoolingOffModal />
+            </div>
 
             {/* Submit form */}
             <PaymentForm orderId={order.id} bankRef={bankRef} />
