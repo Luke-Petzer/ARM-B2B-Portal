@@ -45,3 +45,6 @@ next-env.d.ts
 
 # [H6] local test-seeding SQL — contains hard-coded credentials, never commit
 /supabase/scripts/
+
+# Supabase CLI temp files
+/supabase/.temp/
