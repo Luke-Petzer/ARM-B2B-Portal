@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Stub persist so tests never touch localStorage
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any, _options: unknown) => fn,
+  persist: (fn: (set: unknown, get: unknown, api: unknown) => unknown, _options: unknown) => fn,
 }));
 
 import { useConsentStore } from "@/lib/consent/store";
