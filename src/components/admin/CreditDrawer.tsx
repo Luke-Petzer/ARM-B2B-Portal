@@ -1,5 +1,9 @@
 "use client";
 
+// FEATURE GATE: Send Statement is disabled until payment tracking is implemented.
+// To re-enable: set to true.
+const SEND_STATEMENT_ENABLED = false;
+
 import { useState, useTransition, useCallback } from "react";
 import { Loader2, Send } from "lucide-react";
 import {
@@ -309,7 +313,8 @@ export default function CreditDrawer({
               )}
             </div>
 
-            {/* Send Statement */}
+            {/* Send Statement — gated by SEND_STATEMENT_ENABLED at top of file */}
+            {SEND_STATEMENT_ENABLED && (
             <div className="pt-2 border-t border-slate-100">
               <FieldLabel>Account Statement</FieldLabel>
               <p className="text-[11px] text-slate-400 mb-3">
@@ -345,6 +350,7 @@ export default function CreditDrawer({
                 <p className="text-[11px] text-amber-600 mt-1.5">No email address on file.</p>
               )}
             </div>
+            )}
 
           </div>
 
