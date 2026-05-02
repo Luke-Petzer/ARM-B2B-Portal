@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import GlobalBanner from "@/components/portal/GlobalBanner";
 import NavBar from "@/components/portal/NavBar";
 import CartGuard from "@/components/portal/CartGuard";
+import WhatsAppButton from "@/components/portal/WhatsAppButton";
 import type { AppRole } from "@/lib/supabase/types";
 
 export const revalidate = 60; // revalidate banner state at most every 60 seconds
@@ -30,16 +31,6 @@ export default async function PortalLayout({
 
   if (!session) redirect("/login");
 
-  let businessName: string | null = null;
-  if (session?.profileId) {
-    const { data: profile } = await adminClient
-      .from("profiles")
-      .select("business_name")
-      .eq("id", session.profileId)
-      .single();
-    businessName = profile?.business_name ?? null;
-  }
-
   const showBanner =
     settings?.is_banner_active === true &&
     typeof settings.banner_message === "string" &&
@@ -51,11 +42,15 @@ export default async function PortalLayout({
       {/* Banner is flex-shrink-0 so it never compresses the content area */}
       {showBanner && <GlobalBanner message={settings!.banner_message!} />}
       {/* NavBar lives here — outside any overflow container, always visible */}
-      <NavBar role={session?.role as AppRole | undefined} businessName={businessName} />
+      <NavBar role={session?.role as AppRole | undefined} businessName={session?.businessName ?? null} />
       {/* Content area fills remaining viewport height exactly */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {children}
       </div>
+      {/* WhatsApp support button */}
+      {process.env.NEXT_PUBLIC_WHATSAPP_NUMBER && (
+        <WhatsAppButton phoneNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER} />
+      )}
       {/* Utility footer — legal links */}
       <footer className="flex-shrink-0 border-t border-gray-100 bg-white px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
         <p className="text-[11px] text-gray-400">
