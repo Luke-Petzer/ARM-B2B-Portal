@@ -1050,6 +1050,7 @@ export async function inviteClientAction(
   }
 
   const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/verify-success`,
     data: {
       role: "buyer_default",
       contact_name: contactName,
