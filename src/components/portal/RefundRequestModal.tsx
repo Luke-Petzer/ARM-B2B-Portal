@@ -69,16 +69,16 @@ export default function RefundRequestModal({
         <MoreHorizontal className="w-4 h-4" />
       </button>
 
-      <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); }}>
         <DialogContent className="max-w-md">
           {submitted ? (
             /* Success state */
             <div className="p-6 flex flex-col items-center gap-4 text-center">
               <CheckCircle className="w-12 h-12 text-green-500" />
               <div className="space-y-1">
-                <h3 className="text-base font-semibold text-slate-900">
+                <DialogTitle className="text-base font-semibold text-slate-900">
                   Request Submitted
-                </h3>
+                </DialogTitle>
                 <p className="text-sm text-slate-500 max-w-xs">
                   Your return request for <strong>{referenceNumber}</strong> has
                   been submitted. We will review it and contact you within{" "}
