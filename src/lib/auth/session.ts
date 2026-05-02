@@ -47,6 +47,9 @@ async function _resolveSession(
   if (buyerCookie?.value) {
     const session = await verifyBuyerSession(buyerCookie.value);
     if (session) {
+      // Fetch businessName here so all callers get it from the session object
+      // (avoids per-page sequential DB calls). One DB round-trip per request,
+      // deduplicated by React cache() if getSession() is called multiple times.
       const { data: buyerProfile } = await adminClient
         .from("profiles")
         .select("business_name")

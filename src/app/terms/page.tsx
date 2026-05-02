@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import NavBar from "@/components/portal/NavBar";
 import PublicNavBar from "@/components/PublicNavBar";
-import { adminClient } from "@/lib/supabase/admin";
 import type { AppRole } from "@/lib/supabase/types";
 
 export const metadata = {
@@ -13,15 +12,7 @@ export const metadata = {
 export default async function TermsPage() {
   const session = await getSession();
 
-  let businessName: string | null = null;
-  if (session?.profileId) {
-    const { data: profile } = await adminClient
-      .from("profiles")
-      .select("business_name")
-      .eq("id", session.profileId)
-      .single();
-    businessName = profile?.business_name ?? null;
-  }
+  const businessName = session?.businessName ?? null;
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
