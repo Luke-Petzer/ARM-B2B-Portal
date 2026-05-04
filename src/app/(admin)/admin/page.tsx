@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { Clock, Download, Loader, TrendingUp, Users } from "lucide-react";
 import OrderLedger from "@/components/admin/OrderLedger";
 import type { OrderRow } from "@/components/admin/OrderLedger";
+import AdminFilterBar from "@/components/admin/AdminFilterBar";
 import type { Database } from "@/lib/supabase/types";
 import type { Route } from "next";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
@@ -277,64 +278,13 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         activeClients) and the KpiCard component are still in this file.
         ────────────────────────────────────────────────────────────────────── */}
 
-      {/* Action bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-        <form method="GET" className="flex flex-wrap items-center gap-4">
-          {/* Search */}
-          <input
-            type="text"
-            name="search"
-            defaultValue={search ?? ""}
-            placeholder="Reference or client…"
-            className="h-9 w-52 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-          />
-
-          {/* Status — only actionable states */}
-          <select
-            name="status"
-            defaultValue={status ?? ""}
-            className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-          </select>
-
-          {/* Date range */}
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs text-slate-400 font-medium">From</label>
-            <input
-              type="date"
-              name="dateFrom"
-              defaultValue={dateFrom ?? ""}
-              className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
-            />
-            <label className="text-xs text-slate-400 font-medium">To</label>
-            <input
-              type="date"
-              name="dateTo"
-              defaultValue={dateTo ?? ""}
-              className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            Apply
-          </button>
-
-          {(search || status || dateFrom || dateTo) && (
-            <a
-              href="/admin"
-              className="h-9 px-4 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors flex items-center"
-            >
-              Clear
-            </a>
-          )}
-        </form>
-      </div>
+      {/* Action bar — client component handles debounce + immediate submit */}
+      <AdminFilterBar
+        search={search ?? ""}
+        status={status ?? ""}
+        dateFrom={dateFrom ?? ""}
+        dateTo={dateTo ?? ""}
+      />
 
       {/* Order ledger */}
       <OrderLedger
