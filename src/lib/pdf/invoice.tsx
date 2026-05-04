@@ -327,6 +327,22 @@ const styles = StyleSheet.create({
     color: C.black,
   },
 
+  // ── Proforma Disclosure ────────────────────────────────────────────────
+  // Small, italic, readable — present but not dominant. Sits below banking
+  // details before the absolute-positioned page footer.
+  proformaDisclosure: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: C.rule,
+  },
+  proformaDisclosureText: {
+    fontSize: 6.5,
+    fontStyle: "italic",
+    color: C.mid,
+    lineHeight: 1.5,
+  },
+
   // ── Footer ────────────────────────────────────────────────────────────
   footer: {
     position: "absolute",
@@ -587,6 +603,23 @@ function BankingDetails({
   );
 }
 
+// Verbatim disclosure text — FINDING-161 (SA VAT Act s20 compliance).
+// DO NOT paraphrase. Any wording change must be reviewed for legal accuracy.
+const PROFORMA_DISCLOSURE_TEXT =
+  "This is a proforma invoice for order confirmation purposes only. " +
+  "It is not a valid tax invoice under section 20 of the Value-Added Tax Act, 1991. " +
+  "A full tax invoice will be issued separately upon payment.";
+
+function ProformaDisclosure() {
+  return (
+    <View style={styles.proformaDisclosure}>
+      <Text style={styles.proformaDisclosureText}>
+        {PROFORMA_DISCLOSURE_TEXT}
+      </Text>
+    </View>
+  );
+}
+
 function Footer({ config }: { config: TenantConfig }) {
   return (
     <View style={styles.footer} fixed>
@@ -613,7 +646,7 @@ function InvoiceDocument({ order, items, profile, config }: InvoiceProps) {
     <Document
       title={`Invoice ${order.reference_number}`}
       author={config.business_name}
-      subject={`Tax Invoice — ${profile.business_name}`}
+      subject={`Proforma Invoice — ${profile.business_name}`}
     >
       <Page size="A4" style={styles.page}>
         <Header order={order} config={config} />
@@ -623,6 +656,7 @@ function InvoiceDocument({ order, items, profile, config }: InvoiceProps) {
         <ItemsTable items={items} />
         <Totals order={order} config={config} />
         <BankingDetails order={order} config={config} />
+        <ProformaDisclosure />
         <Footer config={config} />
       </Page>
     </Document>
