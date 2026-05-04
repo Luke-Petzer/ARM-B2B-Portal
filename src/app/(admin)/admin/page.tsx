@@ -134,6 +134,11 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   if (status) ordersQuery = ordersQuery.eq("status", status as OrderStatus);
   if (dateFrom) ordersQuery = ordersQuery.gte("created_at", `${dateFrom}T00:00:00.000Z`);
   if (dateTo)   ordersQuery = ordersQuery.lte("created_at", `${dateTo}T23:59:59.999Z`);
+  if (search) {
+    ordersQuery = ordersQuery.or(
+      `reference_number.ilike.%${search}%,buyer.business_name.ilike.%${search}%,buyer.account_number.ilike.%${search}%`
+    );
+  }
 
   // RBAC filter — employees only see unassigned or their own orders
   if (adminRole === "employee" && !session.isSuperAdmin) {
