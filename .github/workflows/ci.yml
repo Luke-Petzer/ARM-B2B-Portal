@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 # Minimal default permissions — principle of least privilege.
-# Elevate per-job if a specific job ever needs write access.
+# Elevate per-job only if a specific job ever needs write access.
 permissions:
   contents: read
 
@@ -25,12 +25,12 @@ jobs:
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1 (Node 24)
 
       # ── 2. Node 20 ───────────────────────────────────────────────────────────
-      # Installs Node (includes npm and corepack). Cache is handled in step 4.
+      # Installs Node (includes npm and corepack). Cache is handled in steps 4–5.
       - name: Setup Node 20
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0 (Node 24)
         with:
           node-version: "20"
 
@@ -43,41 +43,42 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.0.4 --activate
 
-      # ── 4. pnpm store cache ──────────────────────────────────────────────────
-      # Key on pnpm-lock.yaml hash so the cache is invalidated on any dep change.
-      # The store path is resolved from the running pnpm binary so it works
-      # regardless of OS-specific default store locations.
+      # ── 4. pnpm store path ───────────────────────────────────────────────────
+      # Resolved after pnpm is installed so the path is correct for this OS.
+      # Written to GITHUB_OUTPUT so the cache step can reference it by name.
       - name: Get pnpm store path
         id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
+      # ── 5. pnpm store cache ──────────────────────────────────────────────────
+      # Must run AFTER checkout (lockfile present) and AFTER pnpm is installed
+      # (store path resolved), but BEFORE install so the cache is warmed in time.
       - name: Cache pnpm store
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf  # v4.2.2
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5 (Node 24)
         with:
-          path: ${{ steps.pnpm-store.outputs.path }}
+          path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          restore-keys: ${{ runner.os }}-pnpm-
 
-      # ── 5. Install ───────────────────────────────────────────────────────────
+      # ── 6. Install ───────────────────────────────────────────────────────────
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ── 6. Type check ────────────────────────────────────────────────────────
+      # ── 7. Type check ────────────────────────────────────────────────────────
       - name: Type check
         run: pnpm typecheck
 
-      # ── 7. Lint ──────────────────────────────────────────────────────────────
+      # ── 8. Lint ──────────────────────────────────────────────────────────────
       # 6 pre-existing warnings are expected (documented in docs/audit/follow-ups.md).
       # ESLint exits 0 for warnings-only; this step blocks only on errors.
       - name: Lint
         run: pnpm lint
 
-      # ── 8. Test ──────────────────────────────────────────────────────────────
+      # ── 9. Test ──────────────────────────────────────────────────────────────
       - name: Test
         run: pnpm test
 
-      # ── 9. Build ─────────────────────────────────────────────────────────────
+      # ── 10. Build ────────────────────────────────────────────────────────────
       # REQUIRED: next build regenerates .next/types/ (typed routes). pnpm typecheck
       # alone misses build-time type errors when local generated types are stale.
       # See docs/audit/agent-fix-template.md for the failure mode this catches.
