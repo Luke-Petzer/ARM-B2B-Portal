@@ -436,7 +436,7 @@ export async function checkoutAction(
   if (validSubmissionId) {
     await adminClient
       .from("orders")
-      .update({ client_submission_id: validSubmissionId } as Record<string, unknown>)
+      .update({ client_submission_id: validSubmissionId })
       .eq("id", newOrderId);
   }
 

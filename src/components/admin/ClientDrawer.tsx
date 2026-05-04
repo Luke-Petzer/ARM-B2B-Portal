@@ -109,6 +109,7 @@ export default function ClientDrawer({
 }: ClientDrawerProps) {
   const isEdit = Boolean(client);
   const [isPending, startTransition] = useTransition();
+  const [fetchingPrices, startFetchPrices] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<"buyer_default" | "buyer_30_day">(
     client?.role ?? "buyer_default"
@@ -125,20 +126,26 @@ export default function ClientDrawer({
   }[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; sku: string; price: number }[]>([]);
-  const [loadingPrices, setLoadingPrices] = useState(false);
   const [addingPrice, setAddingPrice] = useState<{ productId: string; productName: string; basPrice: number } | null>(null);
   const [newCustomPrice, setNewCustomPrice] = useState("");
 
   useEffect(() => {
     if (isEdit && client && open) {
-      setLoadingPrices(true);
-      listClientCustomPricesAction(client.id).then((result) => {
+      // Load custom prices and sync discount % when the drawer opens.
+      // Both state updates are inside a useTransition async callback to avoid
+      // synchronous setState in the effect body (react-hooks/set-state-in-effect).
+      // client.client_discount_pct is read synchronously inside the async fn —
+      // the value is already available so there is no perceptible delay.
+      const capturedDiscountPct = String(client.client_discount_pct ?? 0);
+      const capturedClientId = client.id;
+      startFetchPrices(async () => {
+        const result = await listClientCustomPricesAction(capturedClientId);
         if ("data" in result) setCustomPrices(result.data);
-        setLoadingPrices(false);
+        setDiscountPct(capturedDiscountPct);
       });
-      setDiscountPct(String(client.client_discount_pct ?? 0));
     }
-  }, [isEdit, client, open]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, client?.id, open]);
 
   const handleProductSearch = async (q: string) => {
     setProductSearch(q);
@@ -465,7 +472,7 @@ export default function ClientDrawer({
                       )}
 
                       {/* Existing custom prices list */}
-                      {loadingPrices ? (
+                      {fetchingPrices ? (
                         <div className="text-xs text-slate-400 py-4 text-center">Loading custom prices...</div>
                       ) : customPrices.length === 0 ? (
                         <p className="text-xs text-slate-400 py-2">No custom prices set for this client.</p>

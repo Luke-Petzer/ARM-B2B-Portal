@@ -490,6 +490,8 @@ export interface Database {
           cancelled_at: string | null;
           created_at: string;
           updated_at: string;
+          // Added by migration 20260414_11_M6_add_client_submission_id
+          client_submission_id: string | null;
         };
         Insert: {
           id?: string;
@@ -513,6 +515,7 @@ export interface Database {
           cancelled_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_submission_id?: string | null;
         };
         Update: {
           id?: string;
@@ -535,6 +538,7 @@ export interface Database {
           fulfilled_at?: string | null;
           cancelled_at?: string | null;
           updated_at?: string;
+          client_submission_id?: string | null;
         };
         Relationships: [
           {

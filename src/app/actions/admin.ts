@@ -911,7 +911,7 @@ export async function updateProductAction(
     .single();
 
   // Build update payload — does NOT include image (handled via product_images table)
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: Database["public"]["Tables"]["products"]["Update"] = {
     sku,
     name,
     description,

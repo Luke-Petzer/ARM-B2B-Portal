@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Package, Search } from "lucide-react";
 import ProductDrawer, {
@@ -29,9 +29,13 @@ export default function ProductsTable({
   categories,
 }: ProductsTableProps) {
   const router = useRouter();
-  const [products, setProducts] = useState<ProductRow[]>(initialProducts);
-  // Sync local state when server delivers fresh data after router.refresh()
-  useEffect(() => { setProducts(initialProducts); }, [initialProducts]);
+  // useOptimistic syncs with initialProducts on each render (picking up router.refresh() data)
+  // and allows temporary optimistic overrides during transitions.
+  const [products, applyOptimistic] = useOptimistic(
+    initialProducts,
+    (state: ProductRow[], update: { id: string; is_active: boolean }) =>
+      state.map((p) => (p.id === update.id ? { ...p, is_active: update.is_active } : p))
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -60,15 +64,11 @@ export default function ProductsTable({
 
   const handleToggleActive = (product: ProductRow) => {
     startToggle(async () => {
+      applyOptimistic({ id: product.id, is_active: !product.is_active });
       const fd = new FormData();
       fd.set("id", product.id);
       fd.set("is_active", String(!product.is_active));
       await toggleProductActiveAction(fd);
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === product.id ? { ...p, is_active: !p.is_active } : p
-        )
-      );
     });
   };
 
