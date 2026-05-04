@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import AdminFilterBar from "./AdminFilterBar";
 
 interface FilterProps {
@@ -28,7 +29,9 @@ export default function AdminOrdersShell({ filterProps, children }: Props) {
     // be out of range for the newly filtered result set.
     const qs = new URLSearchParams(params).toString();
     startTransition(() => {
-      router.push(`/admin${qs ? `?${qs}` : ""}`, { scroll: false });
+      // Cast required: Next.js typed-routes validates RouteImpl at build time.
+      // The constructed URL is always a valid /admin sub-route; the cast is safe.
+      router.push(`/admin${qs ? `?${qs}` : ""}` as Route, { scroll: false });
     });
   }
 
