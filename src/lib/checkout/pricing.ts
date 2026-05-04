@@ -5,9 +5,16 @@
 // SECURITY INVARIANT: These functions only accept DB-sourced values.
 // The client-supplied unitPrice is NEVER passed here.
 
-/** Round to 2 decimal places — matches PostgreSQL ROUND(x, 2) for normal values. */
+/**
+ * Round to 2 decimal places using the EPSILON nudge pattern.
+ *
+ * `toFixed(2)` is unreliable for IEEE 754 half-values: `(1.005).toFixed(2)`
+ * returns "1.00" because 1.005 is stored as 1.00499999... in binary float.
+ * Adding Number.EPSILON before scaling nudges such values into the correct
+ * rounding direction. Fixes FINDING-160.
+ */
 export function r2(n: number): number {
-  return parseFloat(n.toFixed(2));
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 export interface DbProductPricing {

@@ -47,6 +47,21 @@ describe("r2 — rounding helper", () => {
   it("handles very large numbers without precision loss", () => {
     expect(r2(999999.004)).toBe(999999);
   });
+
+  it("rounds IEEE 754 half-value 1.005 up correctly", () => {
+    // toFixed(2) returns "1.00" due to float representation — should be 1.01
+    expect(r2(1.005)).toBe(1.01);
+  });
+
+  it("rounds IEEE 754 half-value 2.675 up correctly", () => {
+    // toFixed(2) returns "2.67" due to float representation — should be 2.68
+    expect(r2(2.675)).toBe(2.68);
+  });
+
+  it("rounds IEEE 754 half-value 10.045 up correctly", () => {
+    // toFixed(2) returns "10.04" due to float representation — should be 10.05
+    expect(r2(10.045)).toBe(10.05);
+  });
 });
 
 // ── computeEffectiveUnitPrice ─────────────────────────────────────────────────
