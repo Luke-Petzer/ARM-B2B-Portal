@@ -327,6 +327,28 @@ const styles = StyleSheet.create({
     color: C.black,
   },
 
+  // ── Proforma Disclosure ────────────────────────────────────────────────
+  proformaDisclosure: {
+    marginTop: 16,
+    marginHorizontal: 0,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 4,
+    backgroundColor: "#f9fafb",
+  },
+  proformaDisclosureHeading: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  proformaDisclosureBody: {
+    fontSize: 7,
+    color: "#6b7280",
+    lineHeight: 1.4,
+  },
+
   // ── Footer ────────────────────────────────────────────────────────────
   footer: {
     position: "absolute",
@@ -587,6 +609,22 @@ function BankingDetails({
   );
 }
 
+function ProformaDisclosure() {
+  return (
+    <View style={styles.proformaDisclosure}>
+      <Text style={styles.proformaDisclosureHeading}>
+        PROFORMA INVOICE — NOT A TAX INVOICE
+      </Text>
+      <Text style={styles.proformaDisclosureBody}>
+        This document is a proforma invoice confirming your order. It is not a
+        VAT-compliant tax invoice under the VAT Act No. 89 of 1991 (s20). A
+        formal tax invoice will be issued separately. This document does not
+        entitle the recipient to claim input VAT credits.
+      </Text>
+    </View>
+  );
+}
+
 function Footer({ config }: { config: TenantConfig }) {
   return (
     <View style={styles.footer} fixed>
@@ -623,6 +661,7 @@ function InvoiceDocument({ order, items, profile, config }: InvoiceProps) {
         <ItemsTable items={items} />
         <Totals order={order} config={config} />
         <BankingDetails order={order} config={config} />
+        <ProformaDisclosure />
         <Footer config={config} />
       </Page>
     </Document>
