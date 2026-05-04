@@ -328,25 +328,19 @@ const styles = StyleSheet.create({
   },
 
   // ── Proforma Disclosure ────────────────────────────────────────────────
+  // Small, italic, readable — present but not dominant. Sits below banking
+  // details before the absolute-positioned page footer.
   proformaDisclosure: {
     marginTop: 16,
-    marginHorizontal: 0,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 4,
-    backgroundColor: "#f9fafb",
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: C.rule,
   },
-  proformaDisclosureHeading: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: "#374151",
-    marginBottom: 4,
-  },
-  proformaDisclosureBody: {
-    fontSize: 7,
-    color: "#6b7280",
-    lineHeight: 1.4,
+  proformaDisclosureText: {
+    fontSize: 6.5,
+    fontStyle: "italic",
+    color: C.mid,
+    lineHeight: 1.5,
   },
 
   // ── Footer ────────────────────────────────────────────────────────────
@@ -609,17 +603,18 @@ function BankingDetails({
   );
 }
 
+// Verbatim disclosure text — FINDING-161 (SA VAT Act s20 compliance).
+// DO NOT paraphrase. Any wording change must be reviewed for legal accuracy.
+const PROFORMA_DISCLOSURE_TEXT =
+  "This is a proforma invoice for order confirmation purposes only. " +
+  "It is not a valid tax invoice under section 20 of the Value-Added Tax Act, 1991. " +
+  "A full tax invoice will be issued separately upon payment.";
+
 function ProformaDisclosure() {
   return (
     <View style={styles.proformaDisclosure}>
-      <Text style={styles.proformaDisclosureHeading}>
-        PROFORMA INVOICE — NOT A TAX INVOICE
-      </Text>
-      <Text style={styles.proformaDisclosureBody}>
-        This document is a proforma invoice confirming your order. It is not a
-        VAT-compliant tax invoice under the VAT Act No. 89 of 1991 (s20). A
-        formal tax invoice will be issued separately. This document does not
-        entitle the recipient to claim input VAT credits.
+      <Text style={styles.proformaDisclosureText}>
+        {PROFORMA_DISCLOSURE_TEXT}
       </Text>
     </View>
   );
@@ -651,7 +646,7 @@ function InvoiceDocument({ order, items, profile, config }: InvoiceProps) {
     <Document
       title={`Invoice ${order.reference_number}`}
       author={config.business_name}
-      subject={`Tax Invoice — ${profile.business_name}`}
+      subject={`Proforma Invoice — ${profile.business_name}`}
     >
       <Page size="A4" style={styles.page}>
         <Header order={order} config={config} />
