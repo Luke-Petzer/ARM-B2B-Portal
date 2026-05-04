@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowDown, Linkedin, Instagram, Phone, Mail, MapPin } from 'lucide-react'
 import PublicNavBar from '@/components/PublicNavBar'
+import { useConsentStore } from "@/lib/consent/store"
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
@@ -306,6 +307,20 @@ export default function LandingPage() {
                   <Link href="/terms#delivery" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
                     Delivery Terms
                   </Link>
+                </li>
+                <li>
+                  <Link href="/cookie-policy" className="hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm">
+                    Cookie Policy
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => useConsentStore.getState().openModal()}
+                    className="text-left hover:text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 rounded-sm"
+                  >
+                    Cookie Settings
+                  </button>
                 </li>
               </ul>
             </div>

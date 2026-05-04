@@ -11,6 +11,7 @@ export interface ActiveSession {
   profileId: string;
   role: AppRole;
   accountNumber: string | null; // null for admins
+  businessName: string | null;
   isBuyer: boolean;
   isAdmin: boolean;
   /** Sub-role for admin users — null for buyers */
@@ -46,10 +47,20 @@ async function _resolveSession(
   if (buyerCookie?.value) {
     const session = await verifyBuyerSession(buyerCookie.value);
     if (session) {
+      // Fetch businessName here so all callers get it from the session object
+      // (avoids per-page sequential DB calls). One DB round-trip per request,
+      // deduplicated by React cache() if getSession() is called multiple times.
+      const { data: buyerProfile } = await adminClient
+        .from("profiles")
+        .select("business_name")
+        .eq("id", session.profileId)
+        .single();
+
       return {
         profileId: session.profileId,
         role: session.role,
         accountNumber: session.accountNumber,
+        businessName: buyerProfile?.business_name ?? null,
         isBuyer: true,
         isAdmin: false,
         adminRole: null,
@@ -77,7 +88,7 @@ async function _resolveSession(
     // RLS SELECT policies evaluate to false/null for admin accounts.
     const { data: profile } = await adminClient
       .from("profiles")
-      .select("id, role, account_number, admin_role")
+      .select("id, role, account_number, admin_role, business_name")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -87,6 +98,7 @@ async function _resolveSession(
         profileId: profile.id,
         role: profile.role,
         accountNumber: profile.account_number,
+        businessName: profile.business_name ?? null,
         isBuyer: profile.role !== "admin",
         isAdmin: profile.role === "admin",
         adminRole: profile.admin_role ?? null,

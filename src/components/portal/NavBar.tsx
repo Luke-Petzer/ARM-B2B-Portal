@@ -21,10 +21,14 @@ interface NavBarProps {
   businessName?: string | null;
 }
 
+// FEATURE GATE: Statement page is disabled until payment tracking is implemented.
+// To re-enable: set to true.
+const STATEMENT_NAV_ENABLED = false;
+
 export default function NavBar({ role, businessName }: NavBarProps) {
   const NAV_LINKS = [
     ...BASE_NAV_LINKS,
-    ...(role === "buyer_30_day"
+    ...(STATEMENT_NAV_ENABLED && role === "buyer_30_day"
       ? [{ href: "/dashboard/statement" as Route, label: "Statement" }]
       : []),
   ];
@@ -36,8 +40,10 @@ export default function NavBar({ role, businessName }: NavBarProps) {
   const cartCount = useCartStore((s) =>
     s.items.reduce((n, item) => n + item.quantity, 0)
   );
+  const clearCart = useCartStore((s) => s.clearCart);
 
   const handleLogout = () => {
+    clearCart();
     startLogout(async () => {
       await logoutAction();
     });

@@ -29,9 +29,13 @@ function mockSupabaseWithSignIn(
 ) {
   (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
     auth: {
-      signInWithPassword: vi.fn().mockResolvedValue(result),
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: userId ? { id: userId, email_confirmed_at: "2026-01-01T00:00:00Z" } : null },
+      signInWithPassword: vi.fn().mockResolvedValue({
+        data: {
+          user: userId
+            ? { id: userId, email_confirmed_at: "2026-01-01T00:00:00Z" }
+            : null,
+        },
+        error: result.error,
       }),
       signOut: vi.fn().mockResolvedValue({}),
     },
@@ -90,5 +94,23 @@ describe("loginAction", () => {
     mockAdminClientWithRole("admin-user-id", "admin");
     const fd = makeFormData("admin@example.com", "correctpassword");
     await expect(loginAction(fd)).rejects.toThrow("REDIRECT:/admin");
+  });
+
+  it("signs out and returns error when email is not confirmed", async () => {
+    (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: {
+        signInWithPassword: vi.fn().mockResolvedValue({
+          data: {
+            user: { id: "unconfirmed-user", email_confirmed_at: null },
+          },
+          error: null,
+        }),
+        signOut: vi.fn().mockResolvedValue({}),
+      },
+    });
+
+    const fd = makeFormData("unconfirmed@example.com", "password123");
+    const result = await loginAction(fd);
+    expect(result?.error).toMatch(/verify your email/i);
   });
 });

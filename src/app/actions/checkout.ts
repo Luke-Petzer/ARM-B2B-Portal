@@ -9,8 +9,9 @@ import { renderInvoiceToBuffer } from "@/lib/pdf/invoice";
 import SupplierInvoice from "@/emails/SupplierInvoice";
 import BuyerReceipt from "@/emails/BuyerReceipt";
 import type { Route } from "next";
-import type { Database } from "@/lib/supabase/types";
+import type { Database, Json } from "@/lib/supabase/types";
 import { r2, computeLineItem, computeOrderTotals } from "@/lib/checkout/pricing";
+import { resolveProductPrices, type CustomPriceEntry } from "@/lib/pricing/resolveClientPricing";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
 import { checkActionRateLimit } from "@/lib/rate-limit";
 
@@ -167,7 +168,8 @@ async function dispatchFulfillmentEmails(
 export async function checkoutAction(
   rawItems: unknown,
   orderNotes: string = "",
-  clientSubmissionId?: string
+  clientSubmissionId?: string,
+  addressId?: string | null
 ): Promise<{ error: string } | void> {
   // 1. Authenticate
   const session = await getSession();
@@ -199,18 +201,59 @@ export async function checkoutAction(
     }
   }
 
-  // Check buyer has at least one shipping address. Admins are exempt — only
-  // buyers are required to provide a delivery address before placing an order.
-  if (session.isBuyer) {
-    const { data: addresses } = await adminClient
-      .from("addresses")
-      .select("id")
-      .eq("profile_id", session.profileId)
-      .eq("type", "shipping")
-      .limit(1);
+  // Fetch and validate the selected shipping address
+  let shippingAddressSnapshot: Json | null = null;
 
-    if (!addresses || addresses.length === 0) {
-      return { error: "address_required" };
+  if (session.isBuyer) {
+    if (!addressId) {
+      // No address selected — check if any exist
+      const { data: anyAddress } = await adminClient
+        .from("addresses")
+        .select("id, label, line1, line2, suburb, city, province, postal_code, country")
+        .eq("profile_id", session.profileId)
+        .eq("type", "shipping")
+        .eq("is_default", true)
+        .limit(1);
+
+      if (!anyAddress || anyAddress.length === 0) {
+        return { error: "address_required" };
+      }
+      // Use default address
+      const defaultAddr = anyAddress[0];
+      shippingAddressSnapshot = {
+        label: defaultAddr.label,
+        line1: defaultAddr.line1,
+        line2: defaultAddr.line2,
+        suburb: defaultAddr.suburb,
+        city: defaultAddr.city,
+        province: defaultAddr.province,
+        postal_code: defaultAddr.postal_code,
+        country: defaultAddr.country,
+      };
+    } else {
+      // Validate ownership and fetch the selected address
+      const { data: selectedAddress } = await adminClient
+        .from("addresses")
+        .select("id, label, line1, line2, suburb, city, province, postal_code, country")
+        .eq("id", addressId)
+        .eq("profile_id", session.profileId)
+        .eq("type", "shipping")
+        .single();
+
+      if (!selectedAddress) {
+        return { error: "Selected delivery address not found. Please choose another." };
+      }
+
+      shippingAddressSnapshot = {
+        label: selectedAddress.label,
+        line1: selectedAddress.line1,
+        line2: selectedAddress.line2,
+        suburb: selectedAddress.suburb,
+        city: selectedAddress.city,
+        province: selectedAddress.province,
+        postal_code: selectedAddress.postal_code,
+        country: selectedAddress.country,
+      };
     }
   }
 
@@ -251,6 +294,33 @@ export async function checkoutAction(
   // Build a lookup map (price + cost_price + pack_size + discount rules)
   const productMap = new Map(productRows.map((p) => [p.id, p]));
 
+  // 4b. Resolve custom pricing for this buyer
+  const [{ data: rawCustomPrices }, { data: profilePricing }] = await Promise.all([
+    adminClient
+      .from("client_custom_prices")
+      .select("product_id, custom_price")
+      .eq("profile_id", session.profileId),
+    adminClient
+      .from("profiles")
+      .select("client_discount_pct")
+      .eq("id", session.profileId)
+      .single(),
+  ]);
+
+  const customPrices: CustomPriceEntry[] = (rawCustomPrices ?? []).map((cp) => ({
+    product_id: cp.product_id as string,
+    custom_price: Number(cp.custom_price),
+  }));
+  const clientDiscountPct = Number(profilePricing?.client_discount_pct ?? 0);
+
+  // Apply custom pricing to product rows
+  const productsForResolver = productRows.map((p) => ({
+    id: p.id,
+    price: Number(p.price),
+  }));
+  const resolvedPrices = resolveProductPrices(productsForResolver, customPrices, clientDiscountPct);
+  const resolvedPriceMap = new Map(resolvedPrices.map((r) => [r.id, r.price]));
+
   // Guard: every cart item must resolve to a live DB product.
   // A missing entry means the product was deleted between page load and submit.
   for (const item of items) {
@@ -272,13 +342,14 @@ export async function checkoutAction(
   //    accepts only DB-sourced product fields.
   const lineItems = items.map((item) => {
     const dbProduct = productMap.get(item.productId)!;
-    return computeLineItem(dbProduct, item.quantity);
+    const resolvedPrice = resolvedPriceMap.get(item.productId) ?? Number(dbProduct.price);
+    return computeLineItem({ ...dbProduct, price: resolvedPrice }, item.quantity);
   });
 
   const lineTotals = lineItems.map((li) => li.lineTotal);
   const discountSavings = items.map((item, idx) => {
-    const dbPrice = Number(productMap.get(item.productId)!.price);
-    return r2((dbPrice - lineItems[idx].effectiveUnitPrice) * item.quantity);
+    const resolvedPrice = resolvedPriceMap.get(item.productId) ?? Number(productMap.get(item.productId)!.price);
+    return r2((resolvedPrice - lineItems[idx].effectiveUnitPrice) * item.quantity);
   });
 
   const { subtotal, totalDiscountAmount, vatAmount, totalAmount } =
@@ -324,7 +395,7 @@ export async function checkoutAction(
       product_id: item.productId,
       sku: item.sku,
       product_name: item.name,
-      unit_price: Number(dbProduct.price),      // verified server-side price
+      unit_price: resolvedPriceMap.get(item.productId) ?? Number(dbProduct.price),  // resolved custom/discounted price
       cost_price: dbProduct.cost_price ?? null, // snapshot for margin reporting
       pack_size: dbProduct.pack_size,           // snapshot for display integrity
       quantity: item.quantity,
@@ -350,6 +421,7 @@ export async function checkoutAction(
         vat_amount: vatAmount,
         total_amount: totalAmount,
         order_notes: trimmedNotes,
+        shipping_address: shippingAddressSnapshot,
       },
       p_items: orderItemPayloads,
     }
@@ -364,7 +436,7 @@ export async function checkoutAction(
   if (validSubmissionId) {
     await adminClient
       .from("orders")
-      .update({ client_submission_id: validSubmissionId } as Record<string, unknown>)
+      .update({ client_submission_id: validSubmissionId })
       .eq("id", newOrderId);
   }
 

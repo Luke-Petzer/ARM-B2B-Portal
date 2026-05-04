@@ -911,7 +911,7 @@ export async function updateProductAction(
     .single();
 
   // Build update payload — does NOT include image (handled via product_images table)
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: Database["public"]["Tables"]["products"]["Update"] = {
     sku,
     name,
     description,
@@ -1050,6 +1050,7 @@ export async function inviteClientAction(
   }
 
   const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
     data: {
       role: "buyer_default",
       contact_name: contactName,
@@ -1417,6 +1418,162 @@ export async function sendClientStatementAction(
     return { error: "Failed to send statement email." };
   }
 
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Custom Pricing Actions
+// ---------------------------------------------------------------------------
+
+export async function searchProductsAction(
+  query: string
+): Promise<{ error: string } | { data: { id: string; name: string; sku: string; price: number }[] }> {
+  await requireAdmin();
+  const q = query.trim();
+  if (!q) return { data: [] };
+  if (q.length > 200) return { error: "Search too long." };
+
+  const { data, error } = await adminClient
+    .from("products")
+    .select("id, name, sku, price")
+    .eq("is_active", true)
+    .or(`sku.ilike.%${q}%,name.ilike.%${q}%`)
+    .limit(10);
+
+  if (error) return { error: "Search failed." };
+  return {
+    data: (data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      price: Number(p.price),
+    })),
+  };
+}
+
+export async function listClientCustomPricesAction(
+  profileId: string
+): Promise<{ error: string } | { data: { id: string; product_id: string; product_name: string; product_sku: string; base_price: number; custom_price: number; notes: string | null }[] }> {
+  await requireAdmin();
+
+  const idResult = z.string().min(1, "Profile ID required.").safeParse(profileId);
+  if (!idResult.success) return { error: idResult.error.issues[0].message };
+
+  const { data, error } = await adminClient
+    .from("client_custom_prices")
+    .select("id, product_id, custom_price, notes, products ( name, sku, price )")
+    .eq("profile_id", idResult.data)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[admin] listClientCustomPrices:", error.message);
+    return { error: "Failed to fetch custom prices." };
+  }
+
+  type RawRow = {
+    id: string;
+    product_id: string;
+    custom_price: number;
+    notes: string | null;
+    products: { name: string; sku: string; price: number } | null;
+  };
+
+  return {
+    data: ((data ?? []) as RawRow[]).map((row) => ({
+      id: row.id,
+      product_id: row.product_id,
+      product_name: row.products?.name ?? "Unknown",
+      product_sku: row.products?.sku ?? "",
+      base_price: Number(row.products?.price ?? 0),
+      custom_price: Number(row.custom_price),
+      notes: row.notes,
+    })),
+  };
+}
+
+export async function setClientCustomPriceAction(
+  profileId: string,
+  productId: string,
+  customPrice: number,
+  notes?: string
+): Promise<{ error: string } | { success: true }> {
+  const session = await requireAdmin();
+
+  const profileIdResult = z.string().min(1).safeParse(profileId);
+  const productIdResult = z.string().min(1).safeParse(productId);
+  const priceResult = z.number().nonnegative("Price must be 0 or greater.").max(1e7, "Price too large.").safeParse(customPrice);
+
+  if (!profileIdResult.success) return { error: "Invalid profile ID." };
+  if (!productIdResult.success) return { error: "Invalid product ID." };
+  if (!priceResult.success) return { error: priceResult.error.issues[0].message };
+
+  const trimmedNotes = notes?.trim() || null;
+  if (trimmedNotes && trimmedNotes.length > 500) return { error: "Notes too long (max 500 characters)." };
+
+  const { error } = await adminClient
+    .from("client_custom_prices")
+    .upsert(
+      {
+        profile_id: profileIdResult.data,
+        product_id: productIdResult.data,
+        custom_price: priceResult.data,
+        notes: trimmedNotes,
+        created_by: session.profileId,
+      },
+      { onConflict: "profile_id,product_id" }
+    );
+
+  if (error) {
+    console.error("[admin] setClientCustomPrice:", error.message);
+    return { error: "Failed to set custom price." };
+  }
+
+  return { success: true };
+}
+
+export async function removeClientCustomPriceAction(
+  profileId: string,
+  productId: string
+): Promise<{ error: string } | { success: true }> {
+  await requireAdmin();
+
+  const { error } = await adminClient
+    .from("client_custom_prices")
+    .delete()
+    .eq("profile_id", profileId)
+    .eq("product_id", productId);
+
+  if (error) {
+    console.error("[admin] removeClientCustomPrice:", error.message);
+    return { error: "Failed to remove custom price." };
+  }
+
+  return { success: true };
+}
+
+export async function updateClientDiscountPctAction(
+  profileId: string,
+  pct: number
+): Promise<{ error: string } | { success: true }> {
+  await requireAdmin();
+
+  const pctResult = z.number().min(0).max(100, "Discount must be 0-100%.").safeParse(pct);
+  if (!pctResult.success) return { error: pctResult.error.issues[0].message };
+
+  const { error } = await adminClient
+    .from("profiles")
+    .update({
+      client_discount_pct: pctResult.data,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", profileId);
+
+  if (error) {
+    console.error("[admin] updateClientDiscountPct:", error.message);
+    return { error: "Failed to update discount." };
+  }
+
+  revalidatePath("/admin/clients");
   return { success: true };
 }
 

@@ -27,7 +27,16 @@ function formatDate(iso: string | null): string {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
+
+// FEATURE GATE: Statement page is disabled until payment tracking is
+// implemented. Payments are currently managed offline, so outstanding
+// balances shown here would be permanently inaccurate.
+// To re-enable: remove the redirect below.
+const STATEMENT_PAGE_ENABLED = false;
+
 export default async function StatementPage() {
+  if (!STATEMENT_PAGE_ENABLED) redirect("/dashboard");
+
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role !== "buyer_30_day") redirect("/dashboard");

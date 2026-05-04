@@ -57,9 +57,19 @@ export default async function CartPage({ searchParams }: PageProps) {
     }
   }
 
+  const { data: shippingAddresses } = await adminClient
+    .from("addresses")
+    .select("id, label, line1, line2, suburb, city, province, postal_code, is_default")
+    .eq("profile_id", session.profileId)
+    .eq("type", "shipping")
+    .order("is_default", { ascending: false });
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50/30 flex flex-col">
-      <CartReviewShell reorderItems={reorderId ? reorderItems : null} />
+      <CartReviewShell
+        reorderItems={reorderId ? reorderItems : null}
+        shippingAddresses={shippingAddresses ?? []}
+      />
     </div>
   );
 }

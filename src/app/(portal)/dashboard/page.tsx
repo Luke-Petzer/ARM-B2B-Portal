@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 import CatalogueShell from "./CatalogueShell";
+import { resolveProductPrices, type CustomPriceEntry } from "@/lib/pricing/resolveClientPricing";
 
 // ---------------------------------------------------------------------------
 // Cached catalogue fetcher — shared across all authenticated buyers.
@@ -87,7 +88,33 @@ export default async function DashboardPage() {
     slug: c.slug,
   }));
 
-  return (
-    <CatalogueShell products={rows} categories={categories} />
-  );
+  // Resolve custom pricing for this buyer (after cache, per-buyer)
+  const [{ data: rawCustomPrices }, { data: profilePricing }] = await Promise.all([
+    adminClient
+      .from("client_custom_prices")
+      .select("product_id, custom_price")
+      .eq("profile_id", session.profileId),
+    adminClient
+      .from("profiles")
+      .select("client_discount_pct")
+      .eq("id", session.profileId)
+      .single(),
+  ]);
+
+  const customPrices: CustomPriceEntry[] = (rawCustomPrices ?? []).map((cp) => ({
+    product_id: cp.product_id,
+    custom_price: Number(cp.custom_price),
+  }));
+  const discountPct = Number(profilePricing?.client_discount_pct ?? 0);
+
+  // Map to resolver shape, resolve, map back
+  const productsForResolver = rows.map((r) => ({ id: r.productId, price: r.price }));
+  const resolved = resolveProductPrices(productsForResolver, customPrices, discountPct);
+  const resolvedPriceMap = new Map(resolved.map((r) => [r.id, r.price]));
+  const resolvedRows = rows.map((r) => ({
+    ...r,
+    price: resolvedPriceMap.get(r.productId) ?? r.price,
+  }));
+
+  return <CatalogueShell products={resolvedRows} categories={categories} />;
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import CookieBanner from "@/components/consent/CookieBanner";
+import PreferencesModal from "@/components/consent/PreferencesModal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +24,8 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth" style={{ colorScheme: "light" }}>
       <body className={`${inter.variable} font-inter antialiased`}>
         {children}
+        <CookieBanner />
+        <PreferencesModal />
       </body>
     </html>
   );

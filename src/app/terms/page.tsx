@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import NavBar from "@/components/portal/NavBar";
 import PublicNavBar from "@/components/PublicNavBar";
-import { adminClient } from "@/lib/supabase/admin";
 import type { AppRole } from "@/lib/supabase/types";
 
 export const metadata = {
@@ -13,15 +12,7 @@ export const metadata = {
 export default async function TermsPage() {
   const session = await getSession();
 
-  let businessName: string | null = null;
-  if (session?.profileId) {
-    const { data: profile } = await adminClient
-      .from("profiles")
-      .select("business_name")
-      .eq("id", session.profileId)
-      .single();
-    businessName = profile?.business_name ?? null;
-  }
+  const businessName = session?.businessName ?? null;
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -282,7 +273,12 @@ export default async function TermsPage() {
             <h3 className="font-semibold text-slate-800">9. Cookies</h3>
             <p>
               The Portal uses strictly necessary session cookies to authenticate your
-              account. No tracking, advertising, or analytics cookies are used.
+              account. For full details on cookies used and to manage your preferences,
+              see our{" "}
+              <a href="/cookie-policy" className="text-slate-700 underline hover:text-slate-900 transition-colors">
+                Cookie Policy
+              </a>
+              .
             </p>
 
             <h3 className="font-semibold text-slate-800">10. Changes to this Policy</h3>

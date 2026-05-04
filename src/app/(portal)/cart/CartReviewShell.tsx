@@ -6,7 +6,8 @@ import { Info, Loader2, Trash2 } from "lucide-react";
 import { useCartStore, getEffectiveUnitPrice } from "@/lib/cart/store";
 import QuantityStepper from "@/components/portal/QuantityStepper";
 import { checkoutAction } from "@/app/actions/checkout";
-import AddressGateForm from "@/components/auth/AddressGateForm";
+import DeliveryAddressPicker, { type ShippingAddress } from "@/components/portal/DeliveryAddressPicker";
+import { useRouter } from "next/navigation";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -26,14 +27,17 @@ interface ReorderItem {
 
 interface CartReviewShellProps {
   reorderItems: ReorderItem[] | null;
+  shippingAddresses: ShippingAddress[];
 }
 
-export default function CartReviewShell({ reorderItems }: CartReviewShellProps) {
+export default function CartReviewShell({ reorderItems, shippingAddresses }: CartReviewShellProps) {
   const { items, updateQuantity, removeItem, subtotal, addItem, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
-  const [addressRequired, setAddressRequired] = useState(false);
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const defaultAddr = shippingAddresses.find((a) => a.is_default) ?? shippingAddresses[0] ?? null;
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(defaultAddr?.id ?? null);
 
   // Replace cart with reorder items on mount (clear first to prevent quantity accumulation)
   useEffect(() => {
@@ -60,11 +64,7 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
   const handleCheckout = () => {
     setError(null);
     startTransition(async () => {
-      const result = await checkoutAction(items, orderNotes);
-      if (result?.error === "address_required") {
-        setAddressRequired(true);
-        return;
-      }
+      const result = await checkoutAction(items, orderNotes, undefined, selectedAddressId);
       if (result?.error) setError(result.error);
       // On success: checkoutAction calls redirect() — component unmounts
     });
@@ -193,6 +193,12 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
 
         {/* Order summary — 4 cols */}
         <div className="col-span-1 lg:col-span-4">
+          <DeliveryAddressPicker
+            addresses={shippingAddresses}
+            selectedId={selectedAddressId}
+            onSelect={setSelectedAddressId}
+            onAddressAdded={() => router.refresh()}
+          />
           <div className="bg-slate-100 border border-slate-200 rounded-lg p-6 sticky top-24">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">
               Order Summary
@@ -255,11 +261,6 @@ export default function CartReviewShell({ reorderItems }: CartReviewShellProps) 
                 className="w-full min-h-[80px] resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
               />
             </div>
-
-            {/* Address gate */}
-            {addressRequired && (
-              <AddressGateForm onSaved={() => setAddressRequired(false)} />
-            )}
 
             {/* Error message */}
             {error && (
