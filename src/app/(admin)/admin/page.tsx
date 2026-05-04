@@ -135,9 +135,27 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   if (dateFrom) ordersQuery = ordersQuery.gte("created_at", `${dateFrom}T00:00:00.000Z`);
   if (dateTo)   ordersQuery = ordersQuery.lte("created_at", `${dateTo}T23:59:59.999Z`);
   if (search) {
-    ordersQuery = ordersQuery.or(
-      `reference_number.ilike.%${search}%,buyer.business_name.ilike.%${search}%,buyer.account_number.ilike.%${search}%`
-    );
+    // 1. Escape wildcards to prevent pattern abuse (% and _ are ILIKE metacharacters)
+    const escaped = search.slice(0, 200).replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const pattern = `%${escaped}%`;
+
+    // 2. Pre-query: find profile_ids where business_name or account_number matches
+    const { data: matchedProfiles } = await adminClient
+      .from("profiles")
+      .select("id")
+      .or(`business_name.ilike.${pattern},account_number.ilike.${pattern}`);
+
+    const profileIds = (matchedProfiles ?? []).map((p) => p.id);
+
+    // 3. Apply to orders: reference_number match OR buyer profile_id in matching set
+    if (profileIds.length > 0) {
+      ordersQuery = ordersQuery.or(
+        `reference_number.ilike.${pattern},profile_id.in.(${profileIds.join(",")})`
+      );
+    } else {
+      // No profile name/account matches — search only on reference_number
+      ordersQuery = ordersQuery.ilike("reference_number", pattern);
+    }
   }
 
   // RBAC filter — employees only see unassigned or their own orders
