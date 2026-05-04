@@ -140,13 +140,21 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
     const pattern = `%${escaped}%`;
 
     // 2. Pre-query: find profile_ids where business_name or account_number matches
-    const { data: matchedProfiles } = await adminClient
+    const { data: matchedProfiles, error: profilesError } = await adminClient
       .from("profiles")
       .select("id")
-      .or(`business_name.ilike.${pattern},account_number.ilike.${pattern}`);
+      .or(`business_name.ilike.${pattern},account_number.ilike.${pattern}`)
+      .limit(100);
+
+    if (profilesError) {
+      console.error("[admin/search] profiles pre-query failed:", profilesError.message);
+    }
 
     const profileIds = (matchedProfiles ?? []).map((p) => p.id);
 
+    // Cap at 100 profiles — beyond that, profile_id.in.(...) exceeds HTTP query-string
+    // limits (~37 KB for 1000 UUIDs). Broad searches fall back to reference_number only
+    // for the overflow. Acceptable for an admin panel with a bounded buyer list.
     // 3. Apply to orders: reference_number match OR buyer profile_id in matching set
     if (profileIds.length > 0) {
       ordersQuery = ordersQuery.or(

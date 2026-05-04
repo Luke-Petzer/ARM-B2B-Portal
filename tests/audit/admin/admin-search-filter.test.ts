@@ -34,8 +34,9 @@ describe("Admin orders query — search filter", () => {
   });
 
   it("wildcards are escaped before interpolation", () => {
-    // % and _ are ILIKE metacharacters — must be escaped
+    // % and _ are ILIKE metacharacters — both must be escaped
     expect(source).toMatch(/replace\(.*%.*\\\\%/);
+    expect(source).toMatch(/replace\(.*_.*\\\\_/);
   });
 
   it("profiles pre-query searches business_name and account_number", () => {
