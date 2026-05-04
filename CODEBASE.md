@@ -97,7 +97,7 @@ Browser → Vercel Edge → Next.js App Router
 
 2. **Price trust boundary** — Client-supplied prices are display-only. All financial calculations use DB-sourced values. The `computeEffectiveUnitPrice()` function ONLY accepts `DbProductPricing` objects fetched server-side.
 
-3. **Shared catalogue cache** — `unstable_cache` with 5-minute TTL and `revalidateTag("catalogue")` for instant admin-triggered invalidation. Per-client pricing is applied AFTER the shared cache fetch.
+3. **Shared catalogue cache** — `unstable_cache` with 60-second TTL and `revalidateTag("catalogue")` for instant admin-triggered invalidation. Per-client pricing is applied AFTER the shared cache fetch. TTL is deliberately short: `revalidateTag` only affects future requests, so a buyer already on the page won't see changes until they navigate; the checkout guard is the hard safety net for inactive products.
 
 4. **Atomic order creation** — PostgreSQL function `create_order_atomic()` runs as SECURITY DEFINER with service_role guard. Inserts order + order_items in a single transaction.
 

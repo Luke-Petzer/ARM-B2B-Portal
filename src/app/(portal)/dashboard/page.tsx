@@ -7,8 +7,15 @@ import { resolveProductPrices, type CustomPriceEntry } from "@/lib/pricing/resol
 
 // ---------------------------------------------------------------------------
 // Cached catalogue fetcher — shared across all authenticated buyers.
-// Revalidates every 5 minutes (ISR) OR immediately when an admin mutates a
+// Revalidates every 60 seconds (ISR) OR immediately when an admin mutates a
 // product (on-demand invalidation via revalidateTag("catalogue")).
+//
+// TTL rationale: revalidateTag only affects future page requests. A buyer
+// already viewing the catalogue won't see changes (e.g. a deactivated product)
+// until they navigate away and back. 60 s bounds the worst-case stale window
+// without introducing polling or websockets. The checkout action is the hard
+// safety net — it rejects orders for inactive products regardless of what
+// the buyer's browser is showing.
 // ---------------------------------------------------------------------------
 const getCatalogueData = unstable_cache(
   async () => {
@@ -37,7 +44,7 @@ const getCatalogueData = unstable_cache(
     };
   },
   ["catalogue-data"],
-  { tags: ["catalogue"], revalidate: 300 }
+  { tags: ["catalogue"], revalidate: 60 }
 );
 
 export default async function DashboardPage() {
