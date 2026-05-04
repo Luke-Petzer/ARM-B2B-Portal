@@ -134,6 +134,44 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
   if (status) ordersQuery = ordersQuery.eq("status", status as OrderStatus);
   if (dateFrom) ordersQuery = ordersQuery.gte("created_at", `${dateFrom}T00:00:00.000Z`);
   if (dateTo)   ordersQuery = ordersQuery.lte("created_at", `${dateTo}T23:59:59.999Z`);
+  if (search) {
+    // 1. Escape to prevent ILIKE injection.
+    //    Order matters: backslash must be escaped first so the subsequent
+    //    wildcard replacements don't accidentally introduce new backslashes
+    //    that would then escape the wrong character.
+    const escaped = search
+      .slice(0, 200)
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_");
+    const pattern = `%${escaped}%`;
+
+    // 2. Pre-query: find profile_ids where business_name or account_number matches
+    const { data: matchedProfiles, error: profilesError } = await adminClient
+      .from("profiles")
+      .select("id")
+      .or(`business_name.ilike.${pattern},account_number.ilike.${pattern}`)
+      .limit(100);
+
+    if (profilesError) {
+      console.error("[admin/search] profiles pre-query failed:", profilesError.message);
+    }
+
+    const profileIds = (matchedProfiles ?? []).map((p) => p.id);
+
+    // Cap at 100 profiles — beyond that, profile_id.in.(...) exceeds HTTP query-string
+    // limits (~37 KB for 1000 UUIDs). Broad searches fall back to reference_number only
+    // for the overflow. Acceptable for an admin panel with a bounded buyer list.
+    // 3. Apply to orders: reference_number match OR buyer profile_id in matching set
+    if (profileIds.length > 0) {
+      ordersQuery = ordersQuery.or(
+        `reference_number.ilike.${pattern},profile_id.in.(${profileIds.join(",")})`
+      );
+    } else {
+      // No profile name/account matches — search only on reference_number
+      ordersQuery = ordersQuery.ilike("reference_number", pattern);
+    }
+  }
 
   // RBAC filter — employees only see unassigned or their own orders
   if (adminRole === "employee" && !session.isSuperAdmin) {
