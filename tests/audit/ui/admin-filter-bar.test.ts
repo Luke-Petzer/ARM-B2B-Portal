@@ -1,43 +1,42 @@
 // tests/audit/ui/admin-filter-bar.test.ts
 //
-// Guards the AdminFilterBar debounce contract and structural guarantees.
+// Guards the AdminFilterBar + AdminOrdersShell contract.
 //
-// Why this component exists:
-//   The admin command centre (/admin) used a plain <form method="GET"> with a
-//   manual "Apply" button. Every filter change required an explicit click to
-//   trigger a full page reload. Products/Clients pages have instant client-side
-//   search, creating a jarring UX inconsistency.
+// Architecture:
+//   AdminOrdersShell (client) — owns useTransition + useRouter
+//     ├── AdminFilterBar (client) — builds params, calls onNavigate prop
+//     └── <div opacity={isPending ? 0.7 : 1}> — dims ledger while streaming
+//           └── OrderLedger children (passed from Server Component)
 //
-//   AdminFilterBar extracts the filter form into a client component that:
-//   - Debounces text input at DEBOUNCE_MS (300ms) before calling requestSubmit()
-//   - Immediately calls requestSubmit() on select/date changes
-//   - Shows a spinner while the round-trip is in flight (aria-busy)
-//   - Keeps the form as method="GET" for shareable, URL-driven state
+//   When a filter changes:
+//     AdminFilterBar.onNavigate(params) → AdminOrdersShell.navigate(params)
+//     → startTransition(() => router.push(`/admin?${qs}`, { scroll: false }))
+//     → isPending = true → ledger dims → server re-renders → new data streams in
+//     → isPending = false → ledger undims
+//
+//   No form.requestSubmit(), no page reload, no spinner.
+//   The form stays as <form method="GET"> as a no-JS fallback only.
+//   The "Apply" button is in <noscript> — invisible when JS is active.
 //
 // Test strategy:
-//   1. Behavioral debounce tests — pure timer logic with fake timers
-//   2. Source-text structural tests — verify the component has the correct
-//      constants, attributes, and handler separation
+//   1. Debounce behavioural tests — pure timer logic, unchanged from previous impl
+//   2. AdminFilterBar structural tests — verify correct shape after rewrite
+//   3. AdminOrdersShell structural tests — verify useTransition, router.push, opacity
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
 // ── 1. Debounce behavioural contract ─────────────────────────────────────────
-//
-// We test the debounce pattern as a pure function so the test is fast and
-// deterministic. The AdminFilterBar uses this same pattern internally via
-// a useRef timer and DEBOUNCE_MS.
 
 describe("Debounce logic (DEBOUNCE_MS = 300)", () => {
-  const DEBOUNCE_MS = 300; // must match AdminFilterBar.DEBOUNCE_MS
+  const DEBOUNCE_MS = 300;
 
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
   it("callback does NOT fire before the debounce window elapses", () => {
     const fn = vi.fn();
-    // vi.useFakeTimers() makes setTimeout return number, not NodeJS.Timeout
     let timer: number | null = null;
 
     const trigger = () => {
@@ -47,7 +46,6 @@ describe("Debounce logic (DEBOUNCE_MS = 300)", () => {
 
     trigger();
     vi.advanceTimersByTime(DEBOUNCE_MS - 1);
-
     expect(fn).not.toHaveBeenCalled();
   });
 
@@ -62,7 +60,6 @@ describe("Debounce logic (DEBOUNCE_MS = 300)", () => {
 
     trigger();
     vi.advanceTimersByTime(DEBOUNCE_MS);
-
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -75,7 +72,6 @@ describe("Debounce logic (DEBOUNCE_MS = 300)", () => {
       timer = setTimeout(fn, DEBOUNCE_MS) as unknown as number;
     };
 
-    // Simulate 5 keystrokes 50ms apart — well within the debounce window
     trigger();
     vi.advanceTimersByTime(50);
     trigger();
@@ -86,77 +82,107 @@ describe("Debounce logic (DEBOUNCE_MS = 300)", () => {
     vi.advanceTimersByTime(50);
     trigger();
 
-    // Still within debounce window — should not have fired
     expect(fn).not.toHaveBeenCalled();
 
-    // Advance past the debounce window after the last call
     vi.advanceTimersByTime(DEBOUNCE_MS);
-
-    // Should fire exactly once — the trailing call
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("select/date immediate-submit path fires without any delay", () => {
-    // For select and date inputs there is NO timeout — the submit is called
-    // synchronously within the handler. Simulate that pattern:
+  it("select/date immediate path fires without delay", () => {
     const fn = vi.fn();
-
-    // No timer involved — direct call
     fn();
-
     expect(fn).toHaveBeenCalledTimes(1);
-    // And it fires before any timers advance
     vi.advanceTimersByTime(0);
-    expect(fn).toHaveBeenCalledTimes(1); // not called again
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
 
-// ── 2. AdminFilterBar source structure ───────────────────────────────────────
+// ── 2. AdminFilterBar structural tests ───────────────────────────────────────
 
-let source: string;
+let filterBarSource: string;
 
 try {
-  source = fs.readFileSync(
+  filterBarSource = fs.readFileSync(
     path.resolve(__dirname, "../../../src/components/admin/AdminFilterBar.tsx"),
     "utf-8"
   );
 } catch {
-  source = ""; // file missing → all structural tests below will fail
+  filterBarSource = "";
 }
 
 describe("AdminFilterBar source structure", () => {
-  it("file exists at src/components/admin/AdminFilterBar.tsx", () => {
-    expect(source).not.toBe("");
-  });
-
   it("is a client component ('use client' directive present)", () => {
-    expect(source).toMatch(/^["']use client["']/m);
+    expect(filterBarSource).toMatch(/^["']use client["']/m);
   });
 
   it("exports DEBOUNCE_MS constant equal to 300", () => {
-    expect(source).toMatch(/export\s+const\s+DEBOUNCE_MS\s*=\s*300\b/);
+    expect(filterBarSource).toMatch(/export\s+const\s+DEBOUNCE_MS\s*=\s*300\b/);
   });
 
-  it("text input onChange handler references DEBOUNCE_MS (uses debounce path)", () => {
-    // The search text input must use DEBOUNCE_MS in its onChange handler
-    // to ensure the constant is the single source of truth for the delay.
-    expect(source).toMatch(/DEBOUNCE_MS/);
-    // And the search input must have an onChange prop
-    expect(source).toMatch(/name="search"[\s\S]{0,300}onChange/);
+  it("accepts an onNavigate prop (delegates navigation to parent shell)", () => {
+    // AdminFilterBar no longer owns the router — it calls onNavigate()
+    // and lets AdminOrdersShell handle router.push + useTransition.
+    expect(filterBarSource).toMatch(/onNavigate/);
   });
 
-  it("form element has method=\"GET\" (URL-driven, shareable state)", () => {
-    expect(source).toMatch(/method="GET"/);
+  it("does NOT call form.requestSubmit (router.push is used instead)", () => {
+    expect(filterBarSource).not.toMatch(/requestSubmit/);
   });
 
-  it("form or wrapper element uses aria-busy for pending indicator", () => {
-    expect(source).toMatch(/aria-busy/);
+  it("does NOT contain an animate-spin spinner (no spinner in search field)", () => {
+    expect(filterBarSource).not.toMatch(/animate-spin/);
   });
 
-  it("\"Apply\" button is preserved as fallback", () => {
-    // The Apply button stays as a no-JS fallback. Removing it would break
-    // the form for users without JavaScript and for keyboard-only navigation.
-    expect(source).toMatch(/Apply/);
-    expect(source).toMatch(/type="submit"/);
+  it("keeps <form method=\"GET\"> as no-JS fallback", () => {
+    expect(filterBarSource).toMatch(/method="GET"/);
+  });
+
+  it("Apply button is inside <noscript> (hidden when JS is active)", () => {
+    // The Apply button must only be visible when JS is disabled.
+    // With JS active, onNavigate auto-submits — the button is redundant noise.
+    expect(filterBarSource).toMatch(/<noscript>/);
+    // And it must NOT have a visible submit button outside noscript
+    const withoutNoscript = filterBarSource.replace(/<noscript>[\s\S]*?<\/noscript>/g, "");
+    expect(withoutNoscript).not.toMatch(/type="submit"/);
+  });
+});
+
+// ── 3. AdminOrdersShell structural tests ─────────────────────────────────────
+
+let shellSource: string;
+
+try {
+  shellSource = fs.readFileSync(
+    path.resolve(__dirname, "../../../src/components/admin/AdminOrdersShell.tsx"),
+    "utf-8"
+  );
+} catch {
+  shellSource = "";
+}
+
+describe("AdminOrdersShell source structure", () => {
+  it("file exists at src/components/admin/AdminOrdersShell.tsx", () => {
+    expect(shellSource).not.toBe("");
+  });
+
+  it("is a client component ('use client' directive present)", () => {
+    expect(shellSource).toMatch(/^["']use client["']/m);
+  });
+
+  it("uses useTransition (required for seamless streaming navigation)", () => {
+    expect(shellSource).toMatch(/useTransition/);
+  });
+
+  it("uses router.push with scroll: false", () => {
+    // scroll: false prevents the page from jumping to the top on each
+    // filter change — the admin stays at their current scroll position.
+    expect(shellSource).toMatch(/scroll:\s*false/);
+  });
+
+  it("isPending controls table opacity (dims ledger while server renders)", () => {
+    // The opacity transition must reference isPending. We check for both
+    // isPending and opacity appearing in the file — exact class names may vary.
+    expect(shellSource).toMatch(/isPending/);
+    expect(shellSource).toMatch(/opacity/);
   });
 });

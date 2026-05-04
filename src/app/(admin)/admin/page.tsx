@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { Clock, Download, Loader, TrendingUp, Users } from "lucide-react";
 import OrderLedger from "@/components/admin/OrderLedger";
 import type { OrderRow } from "@/components/admin/OrderLedger";
-import AdminFilterBar from "@/components/admin/AdminFilterBar";
+import AdminOrdersShell from "@/components/admin/AdminOrdersShell";
 import type { Database } from "@/lib/supabase/types";
 import type { Route } from "next";
 import { checkCreditStatus } from "@/lib/credit/checkCreditStatus";
@@ -278,29 +278,34 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
         activeClients) and the KpiCard component are still in this file.
         ────────────────────────────────────────────────────────────────────── */}
 
-      {/* Action bar — client component handles debounce + immediate submit */}
-      <AdminFilterBar
-        search={search ?? ""}
-        status={status ?? ""}
-        dateFrom={dateFrom ?? ""}
-        dateTo={dateTo ?? ""}
-      />
-
-      {/* Order ledger */}
-      <OrderLedger
-        orders={orders}
-        totalCount={totalCount ?? 0}
-        page={page}
-        pageSize={PAGE_SIZE}
-        search={search ?? ""}
-        status={status ?? ""}
-        dateFrom={dateFrom ?? ""}
-        dateTo={dateTo ?? ""}
-        adminRole={adminRole}
-        isSuperAdmin={session.isSuperAdmin}
-        currentAdminProfileId={currentAdminProfileId}
-        creditStatusByProfileId={creditStatusByProfileId}
-      />
+      {/*
+        AdminOrdersShell owns useTransition + router.push.
+        It dims the ledger (opacity 70%) while the server streams new data,
+        keeping the old table mounted so there's no flash of empty content.
+      */}
+      <AdminOrdersShell
+        filterProps={{
+          search: search ?? "",
+          status: status ?? "",
+          dateFrom: dateFrom ?? "",
+          dateTo: dateTo ?? "",
+        }}
+      >
+        <OrderLedger
+          orders={orders}
+          totalCount={totalCount ?? 0}
+          page={page}
+          pageSize={PAGE_SIZE}
+          search={search ?? ""}
+          status={status ?? ""}
+          dateFrom={dateFrom ?? ""}
+          dateTo={dateTo ?? ""}
+          adminRole={adminRole}
+          isSuperAdmin={session.isSuperAdmin}
+          currentAdminProfileId={currentAdminProfileId}
+          creditStatusByProfileId={creditStatusByProfileId}
+        />
+      </AdminOrdersShell>
     </div>
   );
 }
