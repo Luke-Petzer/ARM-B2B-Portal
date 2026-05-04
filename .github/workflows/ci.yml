@@ -85,5 +85,13 @@ jobs:
       # REQUIRED: next build regenerates .next/types/ (typed routes). pnpm typecheck
       # alone misses build-time type errors when local generated types are stale.
       # See docs/audit/agent-fix-template.md for the failure mode this catches.
+      #
+      # NEXT_PUBLIC_ vars are evaluated at module load during page-data collection.
+      # src/lib/supabase/config.ts throws if either is absent, so they must be
+      # supplied. These are the public anon key + URL — safe to store as repo secrets.
+      # Set them in: GitHub repo → Settings → Secrets and variables → Actions.
       - name: Build
         run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
