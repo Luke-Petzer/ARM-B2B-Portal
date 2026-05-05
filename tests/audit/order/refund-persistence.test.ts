@@ -248,7 +248,7 @@ describe("OrderHistoryTable — refund status badge", () => {
   });
 
   it("badge covers all three statuses", () => {
-    expect(orderHistorySource).toContain("Return Pending");
+    expect(orderHistorySource).toContain("Return Requested");
     expect(orderHistorySource).toContain("Return Acknowledged");
     expect(orderHistorySource).toContain("Return Resolved");
   });

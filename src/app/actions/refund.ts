@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { Resend } from "resend";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import {
   BuyerRefundConfirmationEmail,
@@ -101,6 +102,10 @@ export async function submitRefundRequestAction(
   }
 
   const { reference } = refundRequest;
+
+  // Revalidate the buyer's order history so the refund badge appears immediately
+  // without requiring a manual page refresh.
+  revalidatePath("/orders");
 
   if (!fromEmail || !supplierEmail) {
     console.error("[refund] Missing email env vars: RESEND_FROM_EMAIL or SUPPLIER_EMAIL");
