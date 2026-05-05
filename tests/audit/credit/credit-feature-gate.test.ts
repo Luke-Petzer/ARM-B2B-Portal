@@ -28,15 +28,35 @@
 //
 // Note on CREDIT_CHECK_ENABLED
 // ─────────────────────────────
-// The audit document (docs/audit/12-open-questions.md) references a
-// CREDIT_CHECK_ENABLED = false flag, but this flag does not exist in the
-// codebase. The checkCreditStatus() function runs live for admin-side credit
-// approval and for 30-day buyer checkout validation. The three flags above are
-// the actual implemented gates. FINDING-101 covers these three flags only.
+// CREDIT_CHECK_ENABLED = false is now implemented in
+// src/lib/credit/checkCreditStatus.ts. When false, checkCreditStatus() returns
+// { blocked: false, reason: null, outstanding: 0, creditLimit: null } immediately
+// without touching the database. Credit management is handled in the client's ERP.
+//
+// Re-enabling requires (documented in the flag's JSDoc):
+//   1. A documented business decision
+//   2. FINDING-101 fail-open behaviour addressed (profile fetch error → unlimited credit)
+//   3. This sentinel test updated with a commit message explaining the decision
+//
+// The three statement flags (STATEMENT_PAGE_ENABLED, STATEMENT_NAV_ENABLED,
+// SEND_STATEMENT_ENABLED) are covered by FINDING-101 above and by separate
+// sentinels in this file.
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
+
+// checkCreditStatus.ts imports adminClient at module level. Without this mock,
+// the Supabase config module throws "Missing required Supabase env vars" when
+// the test dynamically imports checkCreditStatus.ts in the CREDIT_CHECK_ENABLED
+// describe block below. The flag guard (CREDIT_CHECK_ENABLED = false) returns
+// before any DB call, so the mock never needs to do anything real — it just
+// prevents the module-level throw on import.
+vi.mock("../../../src/lib/supabase/admin", () => ({
+  adminClient: {
+    from: vi.fn(),
+  },
+}));
 
 // ── Source file readers ───────────────────────────────────────────────────────
 
@@ -113,5 +133,37 @@ describe("SEND_STATEMENT_ENABLED — must remain false until payment tracking is
   it("Send Statement button is gated by the flag (hidden when disabled)", () => {
     // Confirms the flag controls the UI button, not just declared.
     expect(creditDrawerSource).toMatch(/SEND_STATEMENT_ENABLED\s*&&/);
+  });
+});
+
+// ── CREDIT_CHECK_ENABLED ─────────────────────────────────────────────────────
+
+const creditCheckSource = readSource("src/lib/credit/checkCreditStatus.ts");
+
+describe("CREDIT_CHECK_ENABLED — must remain false until ERP integration is replaced", () => {
+  it("source file exists", () => {
+    expect(creditCheckSource).not.toBe("");
+  });
+
+  it("flag is declared as false (re-enabling without addressing FINDING-101 fail-open is a regression)", () => {
+    // DO NOT simply flip this to true without:
+    //  1. A documented business decision
+    //  2. FINDING-101 fail-open behaviour fixed (profile fetch error → unlimited credit;
+    //     see EH-3 in tests/audit/credit/credit-status.test.ts)
+    //  3. A commit message explaining the decision
+    expect(creditCheckSource).toMatch(/export const CREDIT_CHECK_ENABLED\s*=\s*false/);
+  });
+
+  it("checkCreditStatus returns non-blocking status when flag is false (no DB queries fired)", async () => {
+    // Import dynamically to avoid hoisting issues with the vi.mock in credit-status.test.ts.
+    // This test exercises the public API (checkCreditStatus) — the flag guard path only.
+    const { checkCreditStatus } = await import("../../../src/lib/credit/checkCreditStatus");
+    const result = await checkCreditStatus("any-profile-id");
+
+    // When disabled, the function must return non-blocking without touching the DB.
+    expect(result.blocked).toBe(false);
+    expect(result.reason).toBeNull();
+    expect(result.outstanding).toBe(0);
+    expect(result.creditLimit).toBeNull();
   });
 });

@@ -16,6 +16,7 @@ Three feature flags gate the credit/statement-display surface:
 | `STATEMENT_PAGE_ENABLED` | `src/app/(portal)/dashboard/statement/page.tsx` | `false` |
 | `STATEMENT_NAV_ENABLED` | `src/components/portal/NavBar.tsx` | `false` |
 | `SEND_STATEMENT_ENABLED` | `src/components/admin/CreditDrawer.tsx` | `false` |
+| `CREDIT_CHECK_ENABLED` | `src/lib/credit/checkCreditStatus.ts` | `false` |
 
 ---
 
@@ -45,15 +46,24 @@ than managed externally), showing outstanding balances would be inaccurate.
    decision. The test failure is the tripwire.
 
 **Note on `CREDIT_CHECK_ENABLED`:**
-The audit open-questions doc (`docs/audit/12-open-questions.md`, Q12) references
-a `CREDIT_CHECK_ENABLED = false` flag, but this flag **does not exist** in the
-codebase. The `checkCreditStatus()` function runs live — it is called from:
-- `src/app/actions/checkout.ts` (blocks 30-day buyer checkout if credit limit exceeded)
-- `src/app/(admin)/admin/page.tsx` (surfaces credit status in the order ledger)
+`CREDIT_CHECK_ENABLED = false` is implemented in `src/lib/credit/checkCreditStatus.ts`.
+When false, `checkCreditStatus()` returns `{ blocked: false, reason: null, outstanding: 0, creditLimit: null }`
+immediately without any DB queries. Call sites:
+- `src/app/actions/checkout.ts` — 30-day buyer checkout gate (currently never blocks)
+- `src/app/(admin)/admin/page.tsx` — admin credit status display (currently shows no warnings)
 
-The three flags above are the actual implemented gates. FINDING-101 covers
-these three flags only. The `CREDIT_CHECK_ENABLED` reference in the open-questions
-doc is a documentation inconsistency and does not reflect real code.
+**Status:** Deferred — feature gated off via `CREDIT_CHECK_ENABLED = false`.
+
+**Re-enabling requires all of the following:**
+1. A documented business decision.
+2. FINDING-101 fail-open behaviour addressed: when the profiles table returns an error,
+   `evaluateCreditStatus()` falls through to `creditLimit = null` (unlimited credit). This
+   must be fixed to fail-closed before the flag is flipped to `true`.
+3. The sentinel test in `tests/audit/credit/credit-feature-gate.test.ts` updated with a
+   commit message explaining the decision.
+
+The original credit logic is preserved in `evaluateCreditStatus()` (exported, fully unit-tested).
+Flipping the flag is safe once the prerequisites above are met — no other code changes needed.
 
 ---
 

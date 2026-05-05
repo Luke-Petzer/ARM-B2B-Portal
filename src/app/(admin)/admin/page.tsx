@@ -234,6 +234,11 @@ export default async function AdminCommandCenterPage({ searchParams }: PageProps
     ),
   ];
 
+  // checkCreditStatus is feature-gated via CREDIT_CHECK_ENABLED in
+  // src/lib/credit/checkCreditStatus.ts. When the flag is false (current
+  // default), every call returns { blocked: false, outstanding: 0, ... } without
+  // hitting the DB — so no credit warnings render in the admin command centre.
+  // Re-enabling requires a documented business decision + addressing FINDING-101.
   const creditStatusEntries = await Promise.all(
     thirtyDayPendingProfileIds.map(async (profileId) => {
       const status = await checkCreditStatus(profileId);
