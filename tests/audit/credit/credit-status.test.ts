@@ -1,5 +1,14 @@
 /**
- * Exhaustive unit tests for checkCreditStatus
+ * Unit tests for the credit evaluation logic.
+ *
+ * These tests exercise evaluateCreditStatus() — the internal function that
+ * contains the full credit logic — independently of the CREDIT_CHECK_ENABLED
+ * feature flag. This separation allows the credit rules to remain verified even
+ * while the flag is false (feature gated off). When the flag is re-enabled,
+ * this test suite remains valid without any changes.
+ *
+ * For tests of the flag guard itself (CREDIT_CHECK_ENABLED = false behaviour),
+ * see tests/audit/credit/credit-feature-gate.test.ts.
  *
  * Audit covers:
  *   - Happy paths (no orders, orders within month, high limit)
@@ -9,7 +18,7 @@
  *   - Financial precision (float drift, Supabase NUMERIC strings)
  *
  * NOTE: vi.mock() is hoisted by Vitest before any imports, so the mock
- * is in place before checkCreditStatus loads its adminClient dependency.
+ * is in place before evaluateCreditStatus loads its adminClient dependency.
  */
 
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -22,7 +31,7 @@ vi.mock("../../../src/lib/supabase/admin", () => ({
 }));
 
 import { adminClient } from "../../../src/lib/supabase/admin";
-import { checkCreditStatus } from "../../../src/lib/credit/checkCreditStatus";
+import { evaluateCreditStatus } from "../../../src/lib/credit/checkCreditStatus";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -132,7 +141,7 @@ describe("Happy paths", () => {
   it("HP-1: no orders → not blocked, outstanding = 0, creditLimit passed through", async () => {
     mockSupabase({ orders: [], creditLimit: 500 });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result).toEqual({
       blocked: false,
@@ -151,7 +160,7 @@ describe("Happy paths", () => {
       creditLimit: 1000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
@@ -167,7 +176,7 @@ describe("Happy paths", () => {
       creditLimit: 10000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.outstanding).toBe(50);
@@ -188,7 +197,7 @@ describe("Rule 1 — Overdue (order confirmed before start of current month)", (
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("overdue");
@@ -209,7 +218,7 @@ describe("Rule 1 — Overdue (order confirmed before start of current month)", (
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
@@ -228,7 +237,7 @@ describe("Rule 1 — Overdue (order confirmed before start of current month)", (
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("overdue");
@@ -244,7 +253,7 @@ describe("Rule 1 — Overdue (order confirmed before start of current month)", (
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("overdue");
@@ -262,7 +271,7 @@ describe("Rule 1 — Overdue (order confirmed before start of current month)", (
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
@@ -282,7 +291,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: 500,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("limit_exceeded");
@@ -298,7 +307,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: 500,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
@@ -312,7 +321,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: 500,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.outstanding).toBeCloseTo(499.99, 5);
@@ -326,7 +335,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: null,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
@@ -344,7 +353,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: 0,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("limit_exceeded");
@@ -363,7 +372,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
       creditLimit: -1,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("limit_exceeded");
@@ -375,7 +384,7 @@ describe("Rule 2 — Limit exceeded (outstanding > creditLimit)", () => {
     // not the balance — even a clean slate COD account must not get credit approval.
     mockSupabase({ orders: [], creditLimit: 0 });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("limit_exceeded");
@@ -392,7 +401,7 @@ describe("Error handling", () => {
   it("EH-1: ordersResult.error set → fail-closed: blocked, reason: status_indeterminate", async () => {
     mockSupabase({ ordersError: { message: "connection timeout" } });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("status_indeterminate");
@@ -421,7 +430,7 @@ describe("Error handling", () => {
       return profileChain;
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("status_indeterminate");
@@ -438,7 +447,7 @@ describe("Error handling", () => {
       profileError: { message: "row not found" },
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     // Documents current behaviour: not blocked despite massive outstanding and no valid profile
     expect(result.blocked).toBe(false);
@@ -463,7 +472,7 @@ describe("Financial precision", () => {
       creditLimit: 100,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     // Exact JS sum: 0.1 + 0.2 + 0.3 = 0.6000000000000001 (float drift present)
     // The source does NOT round — we document the exact drift behaviour here
@@ -481,7 +490,7 @@ describe("Financial precision", () => {
       creditLimit: 500,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.outstanding).toBe(200);
     expect(result.blocked).toBe(false);
@@ -495,7 +504,7 @@ describe("Financial precision", () => {
       creditLimit: "500" as unknown as number,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     // 600 > 500 → blocked
     expect(result.blocked).toBe(true);
@@ -514,7 +523,7 @@ describe("Financial precision", () => {
 
     mockSupabase({ orders, creditLimit: 1000 });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
 
     expect(result.outstanding).toBeCloseTo(1000.1, 5);
     expect(result.blocked).toBe(true);
@@ -546,7 +555,7 @@ describe("Month boundary — UTC precision", () => {
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe("overdue");
   });
@@ -566,7 +575,7 @@ describe("Month boundary — UTC precision", () => {
       creditLimit: 5000,
     });
 
-    const result = await checkCreditStatus("profile-abc");
+    const result = await evaluateCreditStatus("profile-abc");
     expect(result.blocked).toBe(false);
     expect(result.reason).toBeNull();
   });

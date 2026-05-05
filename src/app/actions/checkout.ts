@@ -361,7 +361,12 @@ export async function checkoutAction(
   const initialStatus = "pending" as const;
 
   // [M4] Credit limit enforcement for 30-day buyers.
-  // Check that outstanding + this order doesn't exceed credit limit.
+  // checkCreditStatus is feature-gated via CREDIT_CHECK_ENABLED in
+  // src/lib/credit/checkCreditStatus.ts. When the flag is false (current
+  // default), it returns { blocked: false, ... } immediately without any DB
+  // queries — so this block never blocks an order and no errors are shown.
+  // Re-enabling requires a documented business decision + addressing the
+  // FINDING-101 fail-open behaviour. See that file's JSDoc for prerequisites.
   if (is30Day) {
     const creditStatus = await checkCreditStatus(session.profileId);
     if (creditStatus.blocked) {

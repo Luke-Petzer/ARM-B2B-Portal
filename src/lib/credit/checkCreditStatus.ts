@@ -1,6 +1,22 @@
 import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
 
+/**
+ * Credit check feature flag.
+ *
+ * Currently FALSE — credit management is handled in the client's ERP.
+ *
+ * Re-enabling requires:
+ *   1. A documented business decision.
+ *   2. FINDING-101 (fail-open behaviour on profile fetch error — see EH-3 in
+ *      tests/audit/credit/credit-status.test.ts) addressed first: the function
+ *      currently grants unlimited credit when the profiles table returns an error.
+ *      This must be fixed before flipping the flag to true.
+ *   3. Update tests/audit/credit/credit-feature-gate.test.ts to reflect the
+ *      new expected value (with a commit message explaining the business decision).
+ */
+export const CREDIT_CHECK_ENABLED = false;
+
 export interface CreditStatus {
   blocked: boolean;
   reason: "overdue" | "limit_exceeded" | "status_indeterminate" | null;
@@ -11,7 +27,11 @@ export interface CreditStatus {
 }
 
 /**
- * Checks whether a 30-day client's credit should block the "Approve on Credit" button.
+ * Core credit evaluation logic.
+ *
+ * Exported separately so unit tests can exercise the full credit logic
+ * independently of the CREDIT_CHECK_ENABLED flag. In application code,
+ * always call checkCreditStatus() — not this function directly.
  *
  * Blocked if:
  *  1. Any unpaid or credit_approved order with confirmed_at < first day of the current calendar month
@@ -22,7 +42,7 @@ export interface CreditStatus {
  *
  * This check is admin-side ONLY. The buyer portal never calls this.
  */
-export async function checkCreditStatus(profileId: string): Promise<CreditStatus> {
+export async function evaluateCreditStatus(profileId: string): Promise<CreditStatus> {
   // Start of current calendar month (UTC midnight)
   const now = new Date();
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -89,4 +109,20 @@ export async function checkCreditStatus(profileId: string): Promise<CreditStatus
   }
 
   return { blocked: false, reason: null, outstanding, creditLimit };
+}
+
+/**
+ * Feature-gated entry point for credit status checks.
+ *
+ * Returns a non-blocking status immediately when CREDIT_CHECK_ENABLED is false,
+ * without touching the database. Call sites handle the response shape identically
+ * regardless of flag state — no conditional logic needed at the call site.
+ *
+ * When enabled, delegates to evaluateCreditStatus() for full logic.
+ */
+export async function checkCreditStatus(profileId: string): Promise<CreditStatus> {
+  if (!CREDIT_CHECK_ENABLED) {
+    return { blocked: false, reason: null, outstanding: 0, creditLimit: null };
+  }
+  return evaluateCreditStatus(profileId);
 }
