@@ -3,12 +3,23 @@
 // IMPORTANT: Every table must include Relationships: [] or column-select narrowing returns `never`.
 
 export type AppRole = "admin" | "buyer_default" | "buyer_30_day";
+/**
+ * Order lifecycle statuses.
+ *
+ * Active workflow: pending → confirmed (terminal) or pending → cancelled.
+ *
+ * NOTE: `processing` and `fulfilled` exist in the Postgres enum and are
+ * preserved here for DB compatibility, but NO application code transitions
+ * any order to either of these states. Order processing beyond `confirmed`
+ * is handled in the client's ERP — not in this platform. Do not add
+ * transition logic for these statuses without a documented business decision.
+ */
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "processing"
-  | "fulfilled"
-  | "cancelled";
+  | "pending"    // Newly placed — awaiting admin confirmation
+  | "confirmed"  // Admin-approved — terminal state in this platform
+  | "processing" // DB-only: unused — ERP territory
+  | "fulfilled"  // DB-only: unused — ERP territory
+  | "cancelled"; // Admin-cancelled from pending only
 export type PaymentMethod = "eft" | "30_day_account";
 export type PaymentStatus = "pending" | "verified" | "rejected";
 export type AddressType = "billing" | "shipping";

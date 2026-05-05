@@ -254,7 +254,9 @@ tests/
 | `client_custom_prices` | Per-client per-product custom pricing overrides |
 | `global_settings` | Singleton: banner message, active flag |
 | `tenant_config` | Singleton: company info, VAT rate, bank details |
-| `audit_log` | Trigger-populated audit trail |
+| `audit_log` | Trigger-populated audit trail (all INSERT/UPDATE/DELETE on audited tables) |
+| `order_status_history` | Immutable status change log (DB trigger, never queried by application) |
+| `buyer_sessions` | Dormant — schema reserved for future session-revocation feature |
 
 ### Key Columns on `profiles`
 
@@ -292,6 +294,12 @@ unpaid → credit_approved → settled
 - Admins use `adminClient` (service role) which bypasses RLS entirely
 - `create_order_atomic()` is SECURITY DEFINER, restricted to service_role via explicit check
 - Mutations from server actions always go through `adminClient`
+
+### Dormant Tables
+
+**`buyer_sessions`:** Schema exists (columns: `user_agent`, `ip_address`, timestamps). Reserved for a planned session-revocation system. Currently unwired — no INSERT or SELECT exists in any application code. Do not rely on this table for session data; Supabase Auth manages active sessions. If a session-revocation feature is added in a future phase, this table is the intended backing store.
+
+**`order_status_history`:** Populated by the `trg_orders_status_history` database trigger on every INSERT or UPDATE to `orders`. Records `from_status`, `to_status`, and `changed_by` (auth.uid()). Currently no application code queries this table — no admin page or API route surfaces it. It accumulates as an immutable audit trail for POPIA compliance. May be exposed via admin UI in a future phase if operational need arises.
 
 ### Migrations Timeline
 
