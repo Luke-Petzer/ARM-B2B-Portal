@@ -37,3 +37,15 @@ These directives were added when the code contained explicit `any` types that ha
 - All 6 warnings were pre-existing before the pre-flight branch. None were introduced by the fixes in this branch.
 - The 5 unused-disable warnings will disappear if the stale comments are simply deleted.
 - The jsx-a11y warning requires a justified `eslint-disable-next-line` because the `<Image>` type in `@react-pdf/renderer` does not accept an `alt` prop.
+
+---
+
+### CLEANUP-02 — Hide status filter from admin command centre
+
+The admin command centre filter bar exposes filtering by order statuses
+(`processing`, `fulfilled`) that map to features the client isn't using —
+order management is handled in the ERP, not the portal. Hide these
+filter options in the UI; preserve the underlying query logic in case
+the feature is re-enabled in a future phase.
+
+Severity: P3 (cosmetic).

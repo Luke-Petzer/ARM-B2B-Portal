@@ -70,10 +70,10 @@ export default async function TermsPage() {
               conducted under your account. You must notify us immediately of any
               unauthorised use at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>
               .
             </p>
@@ -153,10 +153,10 @@ export default async function TermsPage() {
               Our Information Officer, as required by POPIA, is [INFORMATION OFFICER
               FULL NAME], who may be contacted at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>
               .
             </p>
@@ -262,10 +262,10 @@ export default async function TermsPage() {
             <p>
               To exercise any of the above rights, contact our Information Officer at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>
               .
             </p>
@@ -360,10 +360,10 @@ export default async function TermsPage() {
             <p>
               To exercise this right, the customer must notify us at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>
               , providing the order number, a description of the defect, and
               photographic evidence where possible. We may arrange for inspection of
@@ -383,10 +383,10 @@ export default async function TermsPage() {
               Orders may be cancelled without penalty at any point{" "}
               <strong>before dispatch</strong>. To cancel, contact us at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>{" "}
               with the order number.
             </p>
@@ -409,12 +409,12 @@ export default async function TermsPage() {
               For returns, refunds, or cancellations, contact AR Steel Manufacturing
               (Pty) Ltd at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>{" "}
-              or 021 271 0526.
+              or <a href="tel:+27212710526" className="underline hover:text-slate-900">021 271 0526</a>.
             </p>
           </div>
         </section>
@@ -502,12 +502,12 @@ export default async function TermsPage() {
             <p>
               For delivery queries, contact AR Steel Manufacturing (Pty) Ltd at{" "}
               <a
-                href="mailto:orders@arsteelmanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="underline hover:text-slate-900"
               >
-                orders@arsteelmanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>{" "}
-              or 021 271 0526.
+              or <a href="tel:+27212710526" className="underline hover:text-slate-900">021 271 0526</a>.
             </p>
           </div>
         </section>

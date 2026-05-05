@@ -1,4 +1,4 @@
-# AR Steel Manufacturing — B2B Ordering Portal
+# AR Steel Manufacturing — B2B/B2C Ordering Portal
 
 > Comprehensive codebase documentation for developers and AI agents.
 
@@ -7,7 +7,11 @@
 ## 1. Project Identity
 
 **Name:** AR Steel Manufacturing Ordering Portal  
-**Purpose:** B2B e-commerce platform for steel product wholesale. Buyers (retail shops) log in, browse a catalogue, build orders, and check out on credit (30-day terms) or via EFT. Admins manage products, clients, credit, order fulfilment, and reporting.
+**Purpose:** Order placement portal for AR Steel Manufacturing (Pty) Ltd, serving both B2B (trade) and B2C (consumer) customers. Buyers browse a product catalogue, build orders, and check out on credit (30-day terms) or via EFT. Admins view placed orders, manage products and client accounts.
+
+> **Scope clarification (updated 2026-05):** This platform handles order **placement** only. Once an order is submitted, processing, payment verification, and dispatch are handled in the client's ERP and via email — NOT in this platform. The admin dashboard is a read-only source of truth for placed orders. Any code or comment that implies otherwise reflects an earlier design that was de-scoped.
+
+> **CPA compliance note (updated 2026-05):** This platform is built to support the substantive requirements of the Consumer Protection Act (Act 68 of 2008) for e-commerce sale of goods — including cooling-off rights (s.44 of ECT Act), implied warranties (CPA s.56), and right to return (CPA s.56(2)). The business is responsible for honouring these obligations in practice. Final legal review by a qualified attorney is recommended before public launch. The platform provides the infrastructure for compliance; the business's actual practices determine whether compliance is maintained.
 
 **Tech Stack:**
 
@@ -265,14 +269,15 @@ tests/
 ### Order Status Flow
 
 ```
-pending → confirmed → processed → dispatched
-                   ↘ cancelled
+pending → confirmed  (terminal — processed via ERP)
+        ↘ cancelled
 ```
 
-- `pending`: Newly placed, awaiting admin approval (30-day accounts)
-- `confirmed`: Approved (auto-confirmed for EFT buyers)
-- `processed`: Admin marked as packed/ready
-- `dispatched`: Shipped
+- `pending`: Newly placed; awaiting admin confirmation
+- `confirmed`: Admin-approved (EFT verified or 30-day credit granted) — terminal state in this platform
+- `cancelled`: Admin-cancelled from `pending` only
+
+> **Note:** `processing` and `fulfilled` exist in the DB enum and TypeScript types but no application code transitions to them. Order workflow beyond `confirmed` is handled in the client's ERP. These statuses are preserved in the enum for backward compatibility only.
 
 ### Payment Status
 
