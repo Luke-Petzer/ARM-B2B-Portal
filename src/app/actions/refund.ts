@@ -31,7 +31,7 @@ const RefundSchema = z.object({
 
 export async function submitRefundRequestAction(
   formData: FormData
-): Promise<{ error: string } | { success: true }> {
+): Promise<{ error: string } | { success: true; reference: string }> {
   // 1. Auth check — must come before any DB call
   const session = await getSession();
   if (!session || !session.isBuyer) return { error: "Not authenticated." };
@@ -62,7 +62,7 @@ export async function submitRefundRequestAction(
     return { error: "Order not found." };
   }
 
-  // 4. Fetch buyer email and supplier config from DB
+  // 4. Fetch buyer profile and tenant config in parallel
   const [profileResult, configResult] = await Promise.all([
     adminClient
       .from("profiles")
@@ -78,34 +78,63 @@ export async function submitRefundRequestAction(
   const supplierEmail = process.env.SUPPLIER_EMAIL;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
 
+  // 5. Persist the refund request to the database FIRST.
+  //    The reference number (RRQ-NNNNN) is auto-assigned by the
+  //    trg_refund_requests_reference trigger on INSERT.
+  //    Emails are fire-and-forget after this point — if Resend is down the
+  //    request is still recorded and visible to admins.
+  const { data: refundRequest, error: insertError } = await adminClient
+    .from("refund_requests")
+    .insert({
+      order_id: orderId,
+      profile_id: session.profileId,
+      reason,
+      date_received: dateReceived,
+      details: details ?? null,
+    })
+    .select("reference")
+    .single();
+
+  if (insertError || !refundRequest) {
+    console.error("[refund] DB insert failed:", insertError?.message);
+    return { error: "Failed to record your return request. Please try again." };
+  }
+
+  const { reference } = refundRequest;
+
   if (!fromEmail || !supplierEmail) {
     console.error("[refund] Missing email env vars: RESEND_FROM_EMAIL or SUPPLIER_EMAIL");
-    return { error: "Could not send refund request. Please contact us directly." };
+    // Request is persisted — return success even if emails cannot be sent
+    return { success: true, reference };
   }
 
   const reasonLabel = REASON_LABELS[reason] ?? reason;
+  const adminUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/admin/refund-requests`;
+
   const emailProps = {
     contactName,
     orderReference: order.reference_number,
+    requestReference: reference,
     reasonLabel,
     dateReceived,
     details: details ?? null,
     supplierName,
     buyerEmail: buyerEmail ?? "unknown",
+    adminUrl,
   };
 
-  // 5. Send emails — fire-and-forget so a Resend failure never blocks the user
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sends: Promise<any>[] = [];
+  // 6. Send emails — fire-and-forget so a Resend failure never blocks the user.
+  //    The DB record is the source of truth; emails are supplementary.
+  const sends: Promise<void>[] = [];
 
   if (buyerEmail) {
     sends.push(
       resend.emails.send({
         from: fromEmail,
         to: buyerEmail,
-        subject: `Return Request Received — ${order.reference_number}`,
+        subject: `Return Request ${reference} Received — ${order.reference_number}`,
         react: BuyerRefundConfirmationEmail(emailProps),
-      }).catch((err: unknown) => {
+      }).then(() => undefined).catch((err: unknown) => {
         console.error("[refund] buyer confirmation email failed:", err);
       })
     );
@@ -115,17 +144,17 @@ export async function submitRefundRequestAction(
     resend.emails.send({
       from: fromEmail,
       to: supplierEmail,
-      subject: `New Return Request — ${order.reference_number}`,
+      subject: `New Return Request ${reference} — ${order.reference_number}`,
       react: BusinessRefundNotificationEmail(emailProps),
-    }).catch((err: unknown) => {
+    }).then(() => undefined).catch((err: unknown) => {
       console.error("[refund] business notification email failed:", err);
     })
   );
 
-  // Fire-and-forget: we return success before emails complete
+  // Fire-and-forget: return success before emails complete
   Promise.all(sends).catch((err: unknown) => {
     console.error("[refund] email send batch error:", err);
   });
 
-  return { success: true };
+  return { success: true, reference };
 }

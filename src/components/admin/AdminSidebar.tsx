@@ -11,6 +11,7 @@ import {
   FileText,
   Box,
   Bell,
+  RotateCcw,
 } from "lucide-react";
 import type { Route } from "next";
 
@@ -40,6 +41,11 @@ const MAIN_NAV: { href: Route; label: string; icon: React.ReactNode }[] = [
     href: "/admin/notifications" as Route,
     label: "Notifications",
     icon: <Bell className="w-[18px] h-[18px]" />,
+  },
+  {
+    href: "/admin/refund-requests" as Route,
+    label: "Refund Requests",
+    icon: <RotateCcw className="w-[18px] h-[18px]" />,
   },
 ];
 

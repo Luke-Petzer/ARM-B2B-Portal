@@ -26,6 +26,27 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function RefundBadge({ status, reference }: { status: "pending" | "acknowledged" | "resolved"; reference: string | null }) {
+  const styles = {
+    pending:      "bg-orange-50 text-orange-700 border border-orange-200",
+    acknowledged: "bg-blue-50 text-blue-700 border border-blue-200",
+    resolved:     "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  };
+  const labels = {
+    pending:      "Return Pending",
+    acknowledged: "Return Acknowledged",
+    resolved:     "Return Resolved",
+  };
+  return (
+    <span
+      title={reference ?? undefined}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+}
+
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
   currency: "ZAR",
@@ -51,6 +72,8 @@ interface OrderRow {
   status: string;
   item_count: number;
   items: OrderItem[];
+  refundStatus?: "pending" | "acknowledged" | "resolved" | null;
+  refundReference?: string | null;
 }
 
 interface OrderHistoryTableProps {
@@ -171,7 +194,12 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                     {order.reference_number}
                   </span>
                 </div>
-                <StatusBadge status={order.status} />
+                <div className="flex items-center gap-1.5">
+                  {order.refundStatus && (
+                    <RefundBadge status={order.refundStatus} reference={order.refundReference ?? null} />
+                  )}
+                  <StatusBadge status={order.status} />
+                </div>
               </div>
               <span className="text-sm text-gray-500 pl-6">
                 {formatDate(order.created_at)}
@@ -228,9 +256,14 @@ export default function OrderHistoryTable({ orders }: OrderHistoryTableProps) {
                 ) : (
                   <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 )}
-                <span className="text-[14px] font-medium text-slate-900 uppercase tracking-tight">
-                  {order.reference_number}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[14px] font-medium text-slate-900 uppercase tracking-tight">
+                    {order.reference_number}
+                  </span>
+                  {order.refundStatus && (
+                    <RefundBadge status={order.refundStatus} reference={order.refundReference ?? null} />
+                  )}
+                </div>
               </div>
               <span className="text-[14px] text-gray-500">
                 {order.item_count} Unique{" "}
