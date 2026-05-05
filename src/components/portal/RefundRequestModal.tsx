@@ -30,6 +30,7 @@ export default function RefundRequestModal({
 }: RefundRequestModalProps) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [requestReference, setRequestReference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -38,6 +39,7 @@ export default function RefundRequestModal({
     // Reset state after dialog close animation
     setTimeout(() => {
       setSubmitted(false);
+      setRequestReference(null);
       setError(null);
     }, 200);
   };
@@ -53,6 +55,7 @@ export default function RefundRequestModal({
       if (result && "error" in result) {
         setError(result.error);
       } else {
+        setRequestReference(result.reference);
         setSubmitted(true);
       }
     });
@@ -85,6 +88,14 @@ export default function RefundRequestModal({
                   <strong>3 business days</strong> in accordance with the
                   Consumer Protection Act.
                 </p>
+                {requestReference && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Reference:{" "}
+                    <span className="font-mono font-medium text-slate-600">
+                      {requestReference}
+                    </span>
+                  </p>
+                )}
               </div>
               <Button onClick={handleClose} className="w-full mt-2">
                 Done

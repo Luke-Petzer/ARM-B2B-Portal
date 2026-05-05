@@ -12,6 +12,7 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Section,
   Text,
@@ -86,6 +87,8 @@ export interface RefundRequestEmailProps {
   contactName: string;
   /** Order reference e.g. ORD-00042 */
   orderReference: string;
+  /** Refund request reference e.g. RRQ-00001 */
+  requestReference: string;
   /** Human-readable reason label */
   reasonLabel: string;
   /** Date buyer claims goods were received */
@@ -96,6 +99,8 @@ export interface RefundRequestEmailProps {
   supplierName: string;
   /** Buyer email address (for business notification) */
   buyerEmail: string;
+  /** Admin URL to view this request in the portal (for business notification) */
+  adminUrl: string;
 }
 
 // ── Buyer confirmation email ────────────────────────────────────────────────
@@ -103,13 +108,14 @@ export interface RefundRequestEmailProps {
 export function BuyerRefundConfirmationEmail({
   contactName,
   orderReference,
+  requestReference,
   reasonLabel,
   supplierName,
 }: RefundRequestEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Your return request for {orderReference} has been received.</Preview>
+      <Preview>Your return request {requestReference} for {orderReference} has been received.</Preview>
       <Body style={s.body}>
         <Container style={s.container}>
           <Heading style={s.heading}>Return Request Received</Heading>
@@ -121,6 +127,9 @@ export function BuyerRefundConfirmationEmail({
           </Text>
 
           <Section style={s.infoBox}>
+            <Text style={s.label}>Request Reference</Text>
+            <Text style={s.value}>{requestReference}</Text>
+
             <Text style={s.label}>Order Reference</Text>
             <Text style={s.value}>{orderReference}</Text>
 
@@ -138,8 +147,9 @@ export function BuyerRefundConfirmationEmail({
           <Hr style={{ borderColor: C.border, margin: "24px 0" }} />
 
           <Text style={s.muted}>
-            If you have any urgent questions, please reply to this email or
-            contact {supplierName} directly.
+            Please quote your request reference <strong>{requestReference}</strong> in
+            any correspondence. If you have urgent questions, please reply to this
+            email or contact {supplierName} directly.
           </Text>
         </Container>
       </Body>
@@ -152,17 +162,19 @@ export function BuyerRefundConfirmationEmail({
 export function BusinessRefundNotificationEmail({
   contactName,
   orderReference,
+  requestReference,
   reasonLabel,
   dateReceived,
   details,
   supplierName,
   buyerEmail,
+  adminUrl,
 }: RefundRequestEmailProps) {
   return (
     <Html>
       <Head />
       <Preview>
-        New return request from {contactName} — {orderReference}
+        New return request {requestReference} from {contactName} — {orderReference}
       </Preview>
       <Body style={s.body}>
         <Container style={s.container}>
@@ -173,6 +185,9 @@ export function BusinessRefundNotificationEmail({
           </Text>
 
           <Section style={s.infoBox}>
+            <Text style={s.label}>Request Reference</Text>
+            <Text style={s.value}>{requestReference}</Text>
+
             <Text style={s.label}>Order Reference</Text>
             <Text style={s.value}>{orderReference}</Text>
 
@@ -198,7 +213,14 @@ export function BusinessRefundNotificationEmail({
 
           <Text style={s.bodyText}>
             Please review this request and contact the customer within 3
-            business days in accordance with your returns policy.
+            business days in accordance with your returns policy.{" "}
+            {adminUrl && (
+              <>
+                <Link href={adminUrl} style={{ color: C.heading }}>
+                  View in admin portal →
+                </Link>
+              </>
+            )}
           </Text>
 
           <Hr style={{ borderColor: C.border, margin: "24px 0" }} />
