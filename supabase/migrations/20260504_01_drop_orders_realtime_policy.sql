@@ -1,0 +1,74 @@
+-- Migration: 20260504_01_drop_orders_realtime_policy.sql
+--
+-- Finding (P1 — cross-tenant data exposure via Realtime)
+-- ──────────────────────────────────────────────────────
+-- Supabase auto-generated a SELECT policy when Realtime was enabled on the
+-- orders table:
+--
+--   Policy name : "Authenticated users receive order changes"
+--   Command     : SELECT
+--   Roles       : {authenticated}
+--   USING expr  : true          ← matches every row in the table
+--   WITH CHECK  : (none)
+--
+-- Because RLS policies are OR-combined, this qual=true policy overrides the
+-- correctly-scoped "select_orders" policy. Any authenticated user (buyer or
+-- admin) can subscribe to the orders postgres_changes channel using their
+-- anon-key client and receive change events for every order in the system —
+-- across all tenants.
+--
+-- Investigation
+-- ─────────────
+-- The application does NOT use postgres_changes subscriptions anywhere.
+-- Realtime is implemented via a Broadcast channel ("admin-orders"):
+--
+--   src/components/admin/OrderLedger.tsx
+--     supabase.channel("admin-orders").on("broadcast", { event: "new_order" }, ...)
+--
+--   src/app/actions/checkout.ts
+--     POST /realtime/v1/api/broadcast  (service-role key, server-side only)
+--
+-- This Broadcast approach intentionally bypasses postgres_changes RLS
+-- evaluation — the open SELECT policy has no operational benefit whatsoever.
+--
+-- Fix
+-- ───
+-- Drop the policy. No replacement is needed because no postgres_changes
+-- subscription exists. If Realtime subscriptions are introduced in the future,
+-- a new policy must be written with a properly-scoped USING expression:
+--   • Admin-only subscriptions → USING (is_admin())
+--   • Buyer own-order subscriptions → USING (profile_id = auth.uid() OR is_admin())
+--
+-- Pre-flight check (run before applying)
+-- ───────────────────────────────────────
+-- Verify the policy exists and has qual=true:
+--
+--   SELECT policyname, cmd, qual
+--   FROM pg_policies
+--   WHERE tablename = 'orders'
+--     AND policyname = 'Authenticated users receive order changes';
+--
+-- Expected: one row with qual = 'true'
+-- If the query returns zero rows, the policy was already removed — skip this migration.
+--
+-- Post-flight check (run after applying)
+-- ────────────────────────────────────────
+-- Confirm the policy is gone:
+--
+--   SELECT policyname
+--   FROM pg_policies
+--   WHERE tablename = 'orders'
+--     AND policyname = 'Authenticated users receive order changes';
+--
+-- Expected: zero rows
+--
+-- Smoke test (verify in the app after migration)
+-- ───────────────────────────────────────────────
+-- 1. Log in as a buyer account.
+-- 2. Place an order — checkout flow should complete normally.
+-- 3. Log in as an admin — the order ledger should update (Broadcast still works).
+-- 4. Confirm no JavaScript errors in the browser console related to Realtime.
+-- The Broadcast channel ("admin-orders") does not go through postgres_changes
+-- RLS at all, so dropping this policy has zero functional impact.
+
+DROP POLICY IF EXISTS "Authenticated users receive order changes" ON public.orders;
