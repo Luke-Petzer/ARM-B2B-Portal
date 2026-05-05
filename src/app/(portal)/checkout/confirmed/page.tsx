@@ -6,6 +6,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { CheckCircle2, ArrowLeft, Download, Info } from "lucide-react";
 import CartClearer from "./CartClearer";
+import { ESTIMATED_DELIVERY_RANGE } from "@/lib/config/delivery";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -191,6 +192,13 @@ export default async function ConfirmedPage({ searchParams }: PageProps) {
           <p className="text-[13px] text-gray-400">
             A confirmation has been sent to your registered business email.
           </p>
+
+          <div className="mt-4 flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl text-[12px] text-gray-500 w-full text-left">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400" />
+            <p>
+              Your order is expected to dispatch within {ESTIMATED_DELIVERY_RANGE} from confirmation.
+            </p>
+          </div>
 
           <div className="mt-10 pt-8 border-t border-gray-100 w-full">
             <Link

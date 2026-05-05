@@ -333,11 +333,11 @@ export default function LandingPage() {
               <ul className="space-y-4 font-inter text-sm text-white/40">
                 <li className="flex items-start gap-3">
                   <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/25" />
-                  <span>021 271 0526</span>
+                  <a href="tel:+27212710526" className="hover:text-white/70 transition-colors">021 271 0526</a>
                 </li>
                 <li className="flex items-start gap-3">
                   <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/25" />
-                  <span>info@armanufacturing.co.za</span>
+                  <a href="mailto:orders@armanufacturing.co.za" className="hover:text-white/70 transition-colors">orders@armanufacturing.co.za</a>
                 </li>
                 <li className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/25" />

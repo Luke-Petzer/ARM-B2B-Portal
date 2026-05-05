@@ -122,10 +122,10 @@ export default async function CookiePolicyPage() {
             <p className="text-sm leading-relaxed">
               For questions about this Cookie Policy, contact our Information Officer at{" "}
               <a
-                href="mailto:info@armanufacturing.co.za"
+                href="mailto:orders@armanufacturing.co.za"
                 className="text-slate-900 underline hover:text-slate-700"
               >
-                info@armanufacturing.co.za
+                orders@armanufacturing.co.za
               </a>
               .
             </p>

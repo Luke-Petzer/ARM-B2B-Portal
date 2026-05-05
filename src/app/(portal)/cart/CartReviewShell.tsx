@@ -8,6 +8,7 @@ import QuantityStepper from "@/components/portal/QuantityStepper";
 import { checkoutAction } from "@/app/actions/checkout";
 import DeliveryAddressPicker, { type ShippingAddress } from "@/components/portal/DeliveryAddressPicker";
 import { useRouter } from "next/navigation";
+import { ESTIMATED_DELIVERY_RANGE } from "@/lib/config/delivery";
 
 const ZAR = new Intl.NumberFormat("en-ZA", {
   style: "currency",
@@ -290,6 +291,7 @@ export default function CartReviewShell({ reorderItems, shippingAddresses }: Car
               <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400" />
               <p>
                 VAT is calculated at 15% and confirmed at checkout.
+                Estimated delivery: {ESTIMATED_DELIVERY_RANGE} from order confirmation.
               </p>
             </div>
           </div>
