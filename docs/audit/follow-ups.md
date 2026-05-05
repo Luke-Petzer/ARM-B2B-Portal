@@ -49,3 +49,18 @@ filter options in the UI; preserve the underlying query logic in case
 the feature is re-enabled in a future phase.
 
 Severity: P3 (cosmetic).
+
+---
+
+## Deferred Items (post-launch)
+
+Items that are known gaps but intentionally deferred. Not blocking launch. Revisit after the platform is live and stable.
+
+| Ref | Item | Notes |
+|---|---|---|
+| N-07 | VAT rate hardcoded at 15% in cart components (`CartSidebar.tsx`, `CartReviewShell.tsx`) | Should source from `tenant_config.vat_rate` instead. Low risk while the SA VAT rate is stable. |
+| N-04 | `buyer_sessions` session-revocation system | Schema exists, zero application code. Reserved for a future hardening phase. |
+| N-05 | `order_status_history` admin UI | DB trigger populates this table on every status change. Currently no UI exposes it. Consider surfacing in admin audit view post-launch. |
+| CLEANUP-02 | Status filter in admin command centre | Hide `processing` / `fulfilled` filter options; preserve query logic. P3 cosmetic. |
+| Q-PERF-02 | Pagination on buyer order history | `OrderHistoryTable` loads all orders for a buyer. Will degrade for high-volume accounts. |
+| — | PDF page footer overlap | Cosmetic issue noted on test invoice ORD-000039. Adjust footer/margin in `src/lib/pdf/invoice.tsx`. |
