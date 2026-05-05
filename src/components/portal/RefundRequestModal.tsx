@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MoreHorizontal, Loader2, CheckCircle } from "lucide-react";
+import { RotateCcw, Loader2, CheckCircle } from "lucide-react";
 import { submitRefundRequestAction } from "@/app/actions/refund";
 import {
   Dialog,
@@ -66,10 +66,11 @@ export default function RefundRequestModal({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
-        aria-label={`Options for order ${referenceNumber}`}
+        className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+        aria-label={`Request a return for order ${referenceNumber}`}
       >
-        <MoreHorizontal className="w-4 h-4" />
+        <RotateCcw className="w-3 h-3" />
+        Request Return
       </button>
 
       <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); }}>

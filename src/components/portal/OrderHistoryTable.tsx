@@ -33,7 +33,7 @@ function RefundBadge({ status, reference }: { status: "pending" | "acknowledged"
     resolved:     "bg-emerald-50 text-emerald-700 border border-emerald-200",
   };
   const labels = {
-    pending:      "Return Pending",
+    pending:      "Return Requested",
     acknowledged: "Return Acknowledged",
     resolved:     "Return Resolved",
   };
